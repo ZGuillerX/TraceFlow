@@ -1,0 +1,4 @@
+vtracer
+fastapi
+uvicorn[standard]
+python-multipart

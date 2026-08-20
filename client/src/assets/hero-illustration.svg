@@ -1,0 +1,32 @@
+<svg viewBox="0 0 800 560" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="heroWave" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22C7E8" />
+      <stop offset="55%" stop-color="#1687F8" />
+      <stop offset="100%" stop-color="#7C3AED" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="560" fill="#F8F7F3" />
+  <g opacity="0.9">
+    <path d="M-20 470 C220 380, 340 300, 480 210 C580 145, 660 90, 830 -10 L830 560 L-20 560 Z" fill="url(#heroWave)" opacity="0.85" />
+    <path d="M-20 500 C240 430, 360 350, 470 280 C600 195, 700 130, 830 40 L830 560 L-20 560 Z" fill="#101A46" opacity="0.08" />
+  </g>
+  <g fill="#101A46" opacity="0.55">
+    <rect x="40" y="470" width="10" height="10" />
+    <rect x="58" y="470" width="10" height="10" opacity="0.7" />
+    <rect x="76" y="470" width="10" height="10" opacity="0.45" />
+    <rect x="40" y="452" width="10" height="10" opacity="0.6" />
+    <rect x="58" y="452" width="10" height="10" opacity="0.8" />
+    <rect x="94" y="470" width="10" height="10" opacity="0.3" />
+    <rect x="40" y="434" width="10" height="10" opacity="0.35" />
+  </g>
+  <g fill="#1687F8" opacity="0.65">
+    <rect x="120" y="410" width="8" height="8" />
+    <rect x="140" y="398" width="8" height="8" opacity="0.5" />
+    <rect x="160" y="420" width="8" height="8" opacity="0.7" />
+  </g>
+  <path d="M110 480 C260 440, 360 400, 470 300 C560 220, 630 170, 760 120" fill="none" stroke="#F8F7F3" strokeWidth="4" strokeLinecap="round" opacity="0.8" />
+  <circle cx="110" cy="480" r="7" fill="#F8F7F3" stroke="#101A46" strokeWidth="4" />
+  <circle cx="470" cy="300" r="6" fill="#F8F7F3" stroke="#1687F8" strokeWidth="4" />
+  <circle cx="760" cy="120" r="7" fill="#F8F7F3" stroke="#101A46" strokeWidth="4" />
+</svg>

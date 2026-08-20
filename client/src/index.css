@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* TraceFlow / Vector Atelier: marfil editorial, tinta profunda, curvas Bézier y acentos eléctricos. */
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  --radius: 0.9rem;
+  --background: oklch(0.977 0.009 92);
+  --foreground: oklch(0.18 0.06 265);
+  --card: oklch(0.995 0.004 92);
+  --card-foreground: oklch(0.18 0.06 265);
+  --popover: oklch(0.995 0.004 92);
+  --popover-foreground: oklch(0.18 0.06 265);
+  --primary: oklch(0.61 0.22 257);
+  --primary-foreground: oklch(0.99 0.01 92);
+  --secondary: oklch(0.94 0.022 240);
+  --secondary-foreground: oklch(0.2 0.06 265);
+  --muted: oklch(0.95 0.01 90);
+  --muted-foreground: oklch(0.48 0.04 265);
+  --accent: oklch(0.91 0.07 218);
+  --accent-foreground: oklch(0.2 0.06 265);
+  --border: oklch(0.88 0.025 265);
+  --input: oklch(0.88 0.025 265);
+  --ring: oklch(0.61 0.22 257);
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html { scroll-behavior: smooth; }
+  body { @apply bg-background text-foreground; font-family: 'DM Sans', sans-serif; }
+  button:not(:disabled), a[href] { @apply cursor-pointer; }
+}
+
+@layer components {
+  .container { width: 100%; margin-inline: auto; padding-inline: 1.25rem; }
+  @media (min-width: 640px) { .container { padding-inline: 2rem; } }
+  @media (min-width: 1280px) { .container { max-width: 1240px; padding-inline: 2.5rem; } }
+  .font-display { font-family: 'Space Grotesk', sans-serif; }
+  .eyebrow { font-size: 0.68rem; letter-spacing: 0.18em; font-weight: 700; text-transform: uppercase; color: #1687F8; }
+  .paper-grid { background-image: linear-gradient(rgba(16,26,70,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(16,26,70,.055) 1px, transparent 1px); background-size: 28px 28px; }
+  .checkerboard { background-color: #f7f7f5; background-image: linear-gradient(45deg, #e5e7eb 25%, transparent 25%), linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%); background-size: 24px 24px; background-position: 0 0, 0 12px, 12px -12px, -12px 0; }
+  .hairline { height: 1px; background: #dfe2ea; }
+  .button-press { transition: transform 160ms cubic-bezier(.23,1,.32,1), box-shadow 160ms ease, background 160ms ease; }
+  .button-press:active { transform: scale(.97); }
+  .reveal { animation: reveal .55s cubic-bezier(.23,1,.32,1) both; }
+  .reveal-delay-1 { animation-delay: 80ms; }
+  .reveal-delay-2 { animation-delay: 150ms; }
+  @keyframes reveal { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .reveal { animation: none; } * { transition-duration: .01ms !important; } }
+}
