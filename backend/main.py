@@ -1,3 +1,4 @@
+import re
 import tempfile
 from pathlib import Path
 
@@ -10,6 +11,20 @@ from pipeline.vectorize import detail_to_params, vectorize
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DIST_DIR = BASE_DIR / "dist"
+
+
+def ensure_viewbox(svg: str) -> str:
+    """vtracer no incluye viewBox en el <svg> raiz, solo width/height fijos
+    en px. Sin viewBox, forzar width/height:100% por CSS en el frontend no
+    escala el dibujo (se ve cortado o minusculo) en vez de encajarlo
+    proporcionalmente en el contenedor."""
+    if "viewBox" in svg:
+        return svg
+    match = re.search(r'<svg\b[^>]*\bwidth="([\d.]+)"[^>]*\bheight="([\d.]+)"', svg)
+    if not match:
+        return svg
+    w, h = match.group(1), match.group(2)
+    return re.sub(r"<svg\b", f'<svg viewBox="0 0 {w} {h}"', svg, count=1)
 
 app = FastAPI(title="TraceFlow API")
 
@@ -40,7 +55,7 @@ async def api_vectorize(
         in_path.write_bytes(await file.read())
         vectorize(str(in_path), str(out_path), **params)
 
-        svg_content = out_path.read_text(encoding="utf-8")
+        svg_content = ensure_viewbox(out_path.read_text(encoding="utf-8"))
 
     return Response(content=svg_content, media_type="image/svg+xml")
 
