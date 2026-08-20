@@ -36,10 +36,3 @@ cd backend && uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 FastAPI sirve el frontend compilado (`dist/`) y la API desde el mismo proceso.
-
-## Roadmap
-
-- [x] Vectorización (imagen → SVG) con parámetros reales de vtracer
-- [ ] Quitar fondo antes de vectorizar (rembg + BiRefNet)
-- [ ] Quitar/editar fondo de un SVG existente
-- [ ] Historial persistente
