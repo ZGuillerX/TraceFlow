@@ -2,8 +2,8 @@
 import { ArrowRight, Check, Eraser, Layers3, ScanLine, WandSparkles } from 'lucide-react';
 import { Link } from 'wouter';
 import TraceFlowShell from '@/components/TraceFlowShell';
-import hero from '@/assets/hero-illustration.svg';
-import sample from '@/assets/sample-transform.svg';
+import hero from '@/assets/hero-illustration.webp';
+import sample from '@/assets/sample-transform.webp';
 
 export default function Home() {
   return <TraceFlowShell>

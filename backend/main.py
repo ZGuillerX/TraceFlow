@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
+from pipeline.remove_background import remove_background
 from pipeline.vectorize import detail_to_params, vectorize
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -58,6 +59,15 @@ async def api_vectorize(
         svg_content = ensure_viewbox(out_path.read_text(encoding="utf-8"))
 
     return Response(content=svg_content, media_type="image/svg+xml")
+
+
+@app.post("/api/remove-background")
+async def api_remove_background(file: UploadFile = File(...)):
+    if file.content_type not in {"image/png", "image/jpeg", "image/webp"}:
+        raise HTTPException(400, "Formato no soportado. Usa PNG, JPG o WEBP.")
+
+    png_bytes = remove_background(await file.read())
+    return Response(content=png_bytes, media_type="image/png")
 
 
 if DIST_DIR.exists():

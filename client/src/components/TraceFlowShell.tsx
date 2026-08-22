@@ -4,7 +4,7 @@ import { ArrowUpRight, Clock3, Eraser, Home, Menu, Moon, Settings2, Sparkles, Wa
 import { useState } from 'react';
 import { toast } from 'sonner';
 import mark from '@/assets/mark.svg';
-import fullLogo from '@/assets/logo-full.svg';
+import fullLogo from '@/assets/traceflow_logo.png';
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   return <Link href="/" className="group inline-flex items-center gap-3" aria-label="TraceFlow, inicio">
