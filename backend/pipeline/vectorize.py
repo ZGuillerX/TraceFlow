@@ -51,6 +51,9 @@ def detail_to_params(detail_pct: float, color_groups: int) -> dict:
         # filter_speckle alto los descarta como si fueran ruido
         "filter_speckle": round((1 - detail) * 6),
         "path_precision": max(1, min(10, round(2 + detail * 8))),
-        "corner_threshold": round(80 - detail * 40),
+        # fijo en el default de vtracer: escalarlo con el slider bajaba el
+        # umbral al subir el detalle, y con menos umbral mas puntos se
+        # tratan como esquina dura en vez de curva suave (se ve facetado)
+        "corner_threshold": 60,
         "length_threshold": round(4 + (1 - detail) * 4, 1),
     }
