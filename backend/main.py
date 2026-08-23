@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
+from pipeline.flat_background import remove_flat_background
 from pipeline.remove_background import remove_background
 from pipeline.vectorize import detail_to_params, vectorize
 
@@ -42,18 +43,22 @@ async def api_vectorize(
     file: UploadFile = File(...),
     detail: float = Form(72),
     colors: int = Form(8),
+    remove_bg: bool = Form(False),
 ):
     if file.content_type not in {"image/png", "image/jpeg", "image/webp"}:
         raise HTTPException(400, "Formato no soportado. Usa PNG, JPG o WEBP.")
 
     params = detail_to_params(detail, colors)
+    source_bytes = await file.read()
+    if remove_bg:
+        source_bytes = remove_flat_background(source_bytes)
 
     with tempfile.TemporaryDirectory(prefix="traceflow_") as tmp:
-        suffix = Path(file.filename or "input.png").suffix or ".png"
+        suffix = ".png" if remove_bg else (Path(file.filename or "input.png").suffix or ".png")
         in_path = Path(tmp) / f"input{suffix}"
         out_path = Path(tmp) / "output.svg"
 
-        in_path.write_bytes(await file.read())
+        in_path.write_bytes(source_bytes)
         vectorize(str(in_path), str(out_path), **params)
 
         svg_content = ensure_viewbox(out_path.read_text(encoding="utf-8"))
