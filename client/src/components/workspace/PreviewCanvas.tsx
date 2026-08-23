@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 import { Info, MousePointer2, Upload } from "lucide-react";
 import empty from "@/assets/empty-state.svg";
+import type { VectorizeStageEvent } from "@/lib/api";
 
 interface PreviewCanvasProps {
   input: RefObject<HTMLInputElement | null>;
@@ -11,11 +12,23 @@ interface PreviewCanvasProps {
   setMode: (mode: "preview" | "paths") => void;
   choose: () => void;
   onFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  processing: boolean;
+  stages: VectorizeStageEvent[];
 }
+
+const STAGE_LABELS: Record<string, string> = {
+  original: "Original",
+  ampliada: "Ampliada",
+  sin_fondo: "Sin fondo",
+  colores: "Colores",
+  bordes_suaves: "Bordes suaves",
+};
 
 /** Lienzo de preview del workspace de vectorización: dropzone antes de
  * cargar una imagen, silueta de "lista para vectorizar" con el archivo
- * cargado, y el SVG resultante (con toggle vista previa/trazados). */
+ * cargado, el proceso en vivo mientras vectoriza (etapa actual grande
+ * + tira de miniaturas de las etapas ya recibidas), y el SVG
+ * resultante (con toggle vista previa/trazados). */
 export default function PreviewCanvas({
   input,
   file,
@@ -25,7 +38,12 @@ export default function PreviewCanvas({
   setMode,
   choose,
   onFile,
+  processing,
+  stages,
 }: PreviewCanvasProps) {
+  const imageStages = stages.filter(s => s.image);
+  const lastImageStage = imageStages[imageStages.length - 1];
+  const showLiveStage = processing && !!lastImageStage;
   return (
     <section className="min-h-[560px] border border-[#cfd5e1] bg-white p-4 shadow-[0_18px_50px_rgba(16,26,70,.06)] sm:p-6">
       <div className="mb-5 flex items-center justify-between">
@@ -51,7 +69,18 @@ export default function PreviewCanvas({
       <div
         className={`paper-grid relative flex min-h-[430px] items-center justify-center overflow-hidden border border-dashed border-[#cbd3df] ${file ? "bg-[#f8fbff]" : "bg-[#fafaf7]"}`}
       >
-        {svg ? (
+        {showLiveStage ? (
+          <div className="relative flex h-[380px] w-full max-w-[480px] items-center justify-center overflow-hidden border border-[#cfd8e6] p-6 shadow-[0_15px_35px_rgba(16,26,70,.1)] checkerboard">
+            <img
+              src={lastImageStage.image}
+              alt={STAGE_LABELS[lastImageStage.stage] ?? lastImageStage.stage}
+              className="h-full w-full object-contain"
+            />
+            <div className="absolute left-4 top-4 bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.15em] text-[#101A46] shadow-sm">
+              {STAGE_LABELS[lastImageStage.stage] ?? lastImageStage.stage}…
+            </div>
+          </div>
+        ) : svg ? (
           <div
             className={`relative flex h-[380px] w-full max-w-[480px] items-center justify-center overflow-hidden border border-[#cfd8e6] p-6 shadow-[0_15px_35px_rgba(16,26,70,.1)] ${mode === "paths" ? "bg-white" : "checkerboard"}`}
           >
@@ -140,6 +169,28 @@ export default function PreviewCanvas({
           className="hidden"
         />
       </div>
+      {imageStages.length > 0 && (
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          {imageStages.map((stage, i) => {
+            const isCurrent = processing && stage === lastImageStage;
+            return (
+              <div
+                key={i}
+                className={`flex shrink-0 flex-col items-center gap-1 ${isCurrent ? "" : "opacity-60"}`}
+              >
+                <img
+                  src={stage.image}
+                  alt={STAGE_LABELS[stage.stage] ?? stage.stage}
+                  className={`checkerboard h-14 w-14 rounded border object-cover ${isCurrent ? "border-[#1687F8]" : "border-[#dfe2ea]"}`}
+                />
+                <span className="text-[9px] font-bold uppercase text-[#7a8299]">
+                  {STAGE_LABELS[stage.stage] ?? stage.stage}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs text-[#7a8299]">
           <Info size={14} />{" "}

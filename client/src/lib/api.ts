@@ -38,6 +38,74 @@ export async function vectorizeImage(
   return { svg: await res.text(), bgHex: res.headers.get("X-Bg-Color") };
 }
 
+export interface VectorizeStageEvent {
+  stage: string;
+  image?: string;
+  svg?: string;
+  bgHex?: string | null;
+  message?: string;
+}
+
+/** Igual que vectorizeImage, pero via /api/vectorize/stream: llama a
+ * onStage con cada etapa del pipeline segun va llegando (para el
+ * preview en vivo del proceso), y devuelve el mismo resultado final
+ * al terminar. No se puede usar EventSource (no soporta POST con
+ * body) -- se lee el stream a mano con getReader() y se parsean los
+ * bloques "data: ...\n\n" (formato SSE) segun llegan. */
+export async function vectorizeImageStream(
+  file: File,
+  opts: VectorizeOptions,
+  onStage: (event: VectorizeStageEvent) => void
+): Promise<VectorizeResult> {
+  const body = new FormData();
+  body.append("file", file);
+  body.append("detail", String(opts.detail));
+  body.append("colors", String(opts.colors));
+  body.append("auto_colors", String(opts.autoColors));
+  body.append("remove_bg", String(opts.removeBg));
+
+  const res = await fetch("/api/vectorize/stream", { method: "POST", body });
+  if (!res.ok || !res.body) {
+    throw new Error(
+      await extractErrorMessage(
+        res,
+        "No se pudo vectorizar la imagen. Intenta de nuevo."
+      )
+    );
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let result: VectorizeResult | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() ?? "";
+    for (const part of parts) {
+      if (!part.startsWith("data: ")) continue;
+      const event: VectorizeStageEvent = JSON.parse(part.slice(6));
+      if (event.stage === "error") {
+        throw new Error(
+          event.message || "No se pudo vectorizar la imagen. Intenta de nuevo."
+        );
+      }
+      onStage(event);
+      if (event.stage === "final" && event.svg !== undefined) {
+        result = { svg: event.svg, bgHex: event.bgHex ?? null };
+      }
+    }
+  }
+
+  if (!result) {
+    throw new Error("No se pudo vectorizar la imagen. Intenta de nuevo.");
+  }
+  return result;
+}
+
 /** Manda la imagen a /api/remove-background y devuelve el PNG
  * transparente resultante. */
 export async function removeBackgroundApi(file: File): Promise<Blob> {
