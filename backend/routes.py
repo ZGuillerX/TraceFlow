@@ -46,7 +46,9 @@ def _advance(it: Iterator[VectorizeStage]):
     return next(it, _STREAM_DONE)
 
 
-async def _stream_stages(sync_gen: Iterator[VectorizeStage], timeout_seconds: float) -> AsyncIterator[VectorizeStage]:
+async def _stream_stages(
+    sync_gen: Iterator[VectorizeStage], timeout_seconds: float, request: Request
+) -> AsyncIterator[VectorizeStage]:
     """Puentea el generador sincrono (bloqueante) de run_vectorize_stages
     a un generador async: cada paso corre en un hilo aparte via
     asyncio.to_thread, para no congelar el event loop mientras
@@ -55,10 +57,18 @@ async def _stream_stages(sync_gen: Iterator[VectorizeStage], timeout_seconds: fl
     agota, se manda una etapa "error" en vez de cortar la conexion a
     medio mandar (los headers ya se enviaron, no se puede lanzar un
     HTTPException a esta altura).
+
+    Entre etapa y etapa se revisa si el cliente cancelo (cerro la
+    conexion, p. ej. le dio a "Cancelar"): un hilo ya lanzado con
+    asyncio.to_thread no se puede interrumpir a medio trabajo (vtracer
+    es codigo nativo bloqueante, no hay forma de pedirle que pare), pero
+    si se puede evitar lanzar la SIGUIENTE etapa que aun no empezo.
     """
     it = iter(sync_gen)
     start = time.monotonic()
     while True:
+        if await request.is_disconnected():
+            return
         remaining = timeout_seconds - (time.monotonic() - start)
         if remaining <= 0:
             yield {"stage": "error", "message": "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple."}
@@ -139,7 +149,7 @@ async def api_vectorize_stream(
 
     async def event_stream():
         gen = run_vectorize_stages(source_bytes, suffix, remove_bg, colors, auto_colors, params)
-        async for stage in _stream_stages(gen, PROCESSING_TIMEOUT_SECONDS):
+        async for stage in _stream_stages(gen, PROCESSING_TIMEOUT_SECONDS, request):
             yield _format_sse(stage)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

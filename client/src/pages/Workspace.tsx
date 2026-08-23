@@ -22,6 +22,7 @@ export default function Workspace() {
   const [mode, setMode] = useState<"preview" | "paths">("preview");
   const [processing, setProcessing] = useState(false);
   const [currentStage, setCurrentStage] = useState<string | null>(null);
+  const abortController = useRef<AbortController | null>(null);
   const choose = () => input.current?.click();
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -44,28 +45,37 @@ export default function Workspace() {
     setColorOverrides(prev => ({ ...prev, [id]: hex }));
   const process = async () => {
     if (!file) return toast.info("Carga una imagen primero.");
+    const controller = new AbortController();
+    abortController.current = controller;
     setProcessing(true);
     setCurrentStage(null);
     try {
       const { svg, bgHex } = await vectorizeImageStream(
         file,
         { detail, colors, autoColors, removeBg },
-        stage => setCurrentStage(stage.stage)
+        stage => setCurrentStage(stage.stage),
+        controller.signal
       );
       setSvg(svg);
       setBgHex(bgHex);
       setColorOverrides({});
       toast.success("Preview vectorial actualizada.");
     } catch (err) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : "No se pudo vectorizar la imagen. Intenta de nuevo."
-      );
+      if (err instanceof DOMException && err.name === "AbortError") {
+        toast.info("Vectorización cancelada.");
+      } else {
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : "No se pudo vectorizar la imagen. Intenta de nuevo."
+        );
+      }
     } finally {
       setProcessing(false);
+      abortController.current = null;
     }
   };
+  const cancel = () => abortController.current?.abort();
   const download = () => {
     if (!displaySvg) return toast.info("Genera una preview para exportar.");
     const url = URL.createObjectURL(
@@ -112,6 +122,7 @@ export default function Workspace() {
             onFile={onFile}
             processing={processing}
             currentStage={currentStage}
+            cancel={cancel}
           />
           <SettingsPanel
             detail={detail}

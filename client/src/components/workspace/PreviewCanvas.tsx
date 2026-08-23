@@ -13,6 +13,7 @@ interface PreviewCanvasProps {
   onFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   processing: boolean;
   currentStage: string | null;
+  cancel: () => void;
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -53,6 +54,7 @@ export default function PreviewCanvas({
   onFile,
   processing,
   currentStage,
+  cancel,
 }: PreviewCanvasProps) {
   const progress = currentStage ? (STAGE_PROGRESS[currentStage] ?? 0) : 0;
   return (
@@ -94,6 +96,12 @@ export default function PreviewCanvas({
             <span className="text-[11px] font-bold uppercase tracking-[.15em] text-[#7a8299]">
               {(currentStage && STAGE_LABELS[currentStage]) || "Procesando"}…
             </span>
+            <button
+              onClick={cancel}
+              className="text-xs font-bold text-[#7a8299] underline decoration-dotted hover:text-[#101A46]"
+            >
+              Cancelar
+            </button>
           </div>
         ) : svg ? (
           <div

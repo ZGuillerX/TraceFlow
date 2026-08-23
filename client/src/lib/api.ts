@@ -54,7 +54,8 @@ export interface VectorizeStageEvent {
 export async function vectorizeImageStream(
   file: File,
   opts: VectorizeOptions,
-  onStage: (event: VectorizeStageEvent) => void
+  onStage: (event: VectorizeStageEvent) => void,
+  signal?: AbortSignal
 ): Promise<VectorizeResult> {
   const body = new FormData();
   body.append("file", file);
@@ -63,7 +64,7 @@ export async function vectorizeImageStream(
   body.append("auto_colors", String(opts.autoColors));
   body.append("remove_bg", String(opts.removeBg));
 
-  const res = await fetch("/api/vectorize/stream", { method: "POST", body });
+  const res = await fetch("/api/vectorize/stream", { method: "POST", body, signal });
   if (!res.ok || !res.body) {
     throw new Error(
       await extractErrorMessage(
