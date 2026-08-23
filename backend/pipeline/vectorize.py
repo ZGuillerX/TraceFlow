@@ -45,12 +45,12 @@ def detail_to_params(detail_pct: float, color_groups: int) -> dict:
     Grupos de color 2-16) a los parámetros reales de vtracer."""
     detail = max(10, min(100, detail_pct)) / 100.0
     return {
-        "color_precision": max(1, min(8, round(color_groups / 2))),
+        "color_precision": max(1, min(8, round(color_groups * 0.75))),
         # tope bajo a proposito: en iconos pequenos, detalles internos
         # (huecos, acentos) pueden ser de solo unos pocos pixeles, y un
         # filter_speckle alto los descarta como si fueran ruido
-        "filter_speckle": round((1 - detail) * 6),
-        "path_precision": max(1, min(10, round(2 + detail * 8))),
-        "corner_threshold": round(80 - detail * 40),
-        "length_threshold": round(4 + (1 - detail) * 4, 1),
+        "filter_speckle": round((1 - detail) * 4),
+        "path_precision": max(1, min(10, round(4 + detail * 6))),
+        "corner_threshold": round(70 - detail * 35),
+        "length_threshold": round(3.5 + (1 - detail) * 3, 1),
     }
