@@ -1,3 +1,4 @@
+import asyncio
 import re
 import tempfile
 from pathlib import Path
@@ -9,10 +10,16 @@ from fastapi.staticfiles import StaticFiles
 
 from pipeline.flat_background import remove_flat_background
 from pipeline.remove_background import remove_background
+from pipeline.validation import validate_image
 from pipeline.vectorize import detail_to_params, vectorize
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DIST_DIR = BASE_DIR / "dist"
+
+# El primer llamado a rembg carga el modelo BiRefNet (~90s en CPU) antes de
+# procesar; despues queda cacheado en memoria y cada imagen tarda unos
+# segundos. El timeout cubre ese arranque en frio.
+PROCESSING_TIMEOUT_SECONDS = 180
 
 
 def ensure_viewbox(svg: str) -> str:
@@ -27,6 +34,32 @@ def ensure_viewbox(svg: str) -> str:
         return svg
     w, h = match.group(1), match.group(2)
     return re.sub(r"<svg\b", f'<svg viewBox="0 0 {w} {h}"', svg, count=1)
+
+
+def run_vectorize(source_bytes: bytes, suffix: str, remove_bg: bool, params: dict) -> str:
+    """Trabajo sincrono (bloqueante) que corre en un hilo aparte via
+    asyncio.to_thread, para no congelar el event loop de FastAPI mientras
+    vtracer/rembg procesan la imagen."""
+    if remove_bg:
+        source_bytes = remove_flat_background(source_bytes)
+        suffix = ".png"
+
+    with tempfile.TemporaryDirectory(prefix="traceflow_") as tmp:
+        in_path = Path(tmp) / f"input{suffix}"
+        out_path = Path(tmp) / "output.svg"
+
+        in_path.write_bytes(source_bytes)
+        vectorize(str(in_path), str(out_path), **params)
+
+        return ensure_viewbox(out_path.read_text(encoding="utf-8"))
+
+
+async def with_timeout(coro):
+    try:
+        return await asyncio.wait_for(coro, timeout=PROCESSING_TIMEOUT_SECONDS)
+    except asyncio.TimeoutError:
+        raise HTTPException(504, "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple.")
+
 
 app = FastAPI(title="TraceFlow API")
 
@@ -45,33 +78,28 @@ async def api_vectorize(
     colors: int = Form(8),
     remove_bg: bool = Form(False),
 ):
-    if file.content_type not in {"image/png", "image/jpeg", "image/webp"}:
-        raise HTTPException(400, "Formato no soportado. Usa PNG, JPG o WEBP.")
+    source_bytes = await file.read()
+    error = validate_image(file.content_type, source_bytes)
+    if error:
+        raise HTTPException(400, error)
 
     params = detail_to_params(detail, colors)
-    source_bytes = await file.read()
-    if remove_bg:
-        source_bytes = remove_flat_background(source_bytes)
+    suffix = Path(file.filename or "input.png").suffix or ".png"
 
-    with tempfile.TemporaryDirectory(prefix="traceflow_") as tmp:
-        suffix = ".png" if remove_bg else (Path(file.filename or "input.png").suffix or ".png")
-        in_path = Path(tmp) / f"input{suffix}"
-        out_path = Path(tmp) / "output.svg"
-
-        in_path.write_bytes(source_bytes)
-        vectorize(str(in_path), str(out_path), **params)
-
-        svg_content = ensure_viewbox(out_path.read_text(encoding="utf-8"))
-
+    svg_content = await with_timeout(
+        asyncio.to_thread(run_vectorize, source_bytes, suffix, remove_bg, params)
+    )
     return Response(content=svg_content, media_type="image/svg+xml")
 
 
 @app.post("/api/remove-background")
 async def api_remove_background(file: UploadFile = File(...)):
-    if file.content_type not in {"image/png", "image/jpeg", "image/webp"}:
-        raise HTTPException(400, "Formato no soportado. Usa PNG, JPG o WEBP.")
+    source_bytes = await file.read()
+    error = validate_image(file.content_type, source_bytes)
+    if error:
+        raise HTTPException(400, error)
 
-    png_bytes = remove_background(await file.read())
+    png_bytes = await with_timeout(asyncio.to_thread(remove_background, source_bytes))
     return Response(content=png_bytes, media_type="image/png")
 
 
