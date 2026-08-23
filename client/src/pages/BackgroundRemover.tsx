@@ -8,9 +8,9 @@ import {
   RotateCcw,
   Sparkles,
   Upload,
-  X,
 } from "lucide-react";
 import TraceFlowShell from "@/components/TraceFlowShell";
+import ZoomLightbox from "@/components/ZoomLightbox";
 import { toast } from "sonner";
 import sample from "@/assets/sample-transform.webp";
 import { removeBackgroundApi } from "@/lib/api";
@@ -24,14 +24,6 @@ export default function BackgroundRemover() {
   const [processing, setProcessing] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [zoomed, setZoomed] = useState(false);
-  useEffect(() => {
-    if (!zoomed) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setZoomed(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [zoomed]);
   useEffect(() => {
     if (!processing) return;
     setElapsed(0);
@@ -215,26 +207,13 @@ export default function BackgroundRemover() {
           </aside>
         </div>
       </div>
-      {zoomed && (
-        <div
-          onClick={() => setZoomed(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-8"
-        >
-          <button
-            onClick={() => setZoomed(false)}
-            aria-label="Cerrar vista ampliada"
-            className="absolute right-6 top-6 rounded-lg bg-white/10 p-2 text-white hover:bg-white/20"
-          >
-            <X size={20} />
-          </button>
-          <img
-            src={imgSrc}
-            alt="Vista previa ampliada"
-            onClick={e => e.stopPropagation()}
-            className={`max-h-full max-w-full object-contain ${isDemo ? "mix-blend-multiply opacity-90" : ""}`}
-          />
-        </div>
-      )}
+      <ZoomLightbox
+        src={imgSrc}
+        alt="Vista previa ampliada"
+        open={zoomed}
+        onClose={() => setZoomed(false)}
+        imgClassName={isDemo ? "mix-blend-multiply opacity-90" : ""}
+      />
     </TraceFlowShell>
   );
 }
