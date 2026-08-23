@@ -13,7 +13,7 @@ import {
 import TraceFlowShell from "@/components/TraceFlowShell";
 import { toast } from "sonner";
 import sample from "@/assets/sample-transform.webp";
-import { extractErrorMessage } from "@/lib/errors";
+import { removeBackgroundApi } from "@/lib/api";
 
 export default function BackgroundRemover() {
   const input = useRef<HTMLInputElement>(null);
@@ -58,21 +58,7 @@ export default function BackgroundRemover() {
     if (!file) return toast.info("Carga una imagen primero.");
     setProcessing(true);
     try {
-      const body = new FormData();
-      body.append("file", file);
-      const res = await fetch("/api/remove-background", {
-        method: "POST",
-        body,
-      });
-      if (!res.ok) {
-        throw new Error(
-          await extractErrorMessage(
-            res,
-            "No se pudo quitar el fondo. Intenta de nuevo."
-          )
-        );
-      }
-      const blob = await res.blob();
+      const blob = await removeBackgroundApi(file);
       setResultUrl(URL.createObjectURL(blob));
       setShowOriginal(false);
       toast.success("Fondo eliminado. Descarga lista.");

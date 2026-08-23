@@ -18,7 +18,7 @@ import TraceFlowShell from "@/components/TraceFlowShell";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import empty from "@/assets/empty-state.svg";
-import { extractErrorMessage } from "@/lib/errors";
+import { vectorizeImage } from "@/lib/api";
 import { recolorSvg } from "@/lib/recolor";
 
 export default function Workspace() {
@@ -51,23 +51,14 @@ export default function Workspace() {
     if (!file) return toast.info("Carga una imagen primero.");
     setProcessing(true);
     try {
-      const body = new FormData();
-      body.append("file", file);
-      body.append("detail", String(detail));
-      body.append("colors", String(colors));
-      body.append("auto_colors", String(autoColors));
-      body.append("remove_bg", String(removeBg));
-      const res = await fetch("/api/vectorize", { method: "POST", body });
-      if (!res.ok) {
-        throw new Error(
-          await extractErrorMessage(
-            res,
-            "No se pudo vectorizar la imagen. Intenta de nuevo."
-          )
-        );
-      }
-      setSvg(await res.text());
-      setBgHex(res.headers.get("X-Bg-Color"));
+      const { svg, bgHex } = await vectorizeImage(file, {
+        detail,
+        colors,
+        autoColors,
+        removeBg,
+      });
+      setSvg(svg);
+      setBgHex(bgHex);
       toast.success("Preview vectorial actualizada.");
     } catch (err) {
       toast.error(
