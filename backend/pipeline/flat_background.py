@@ -5,6 +5,24 @@ from PIL import Image
 from scipy import ndimage
 
 
+def has_existing_transparency(image_bytes: bytes, threshold: float = 0.03) -> bool:
+    """Detecta si la imagen ya viene recortada (con transparencia real de
+    origen) en vez de tener un fondo de color plano por quitar.
+
+    remove_flat_background asume que el fondo es un color solido que
+    llena el cuadro (p. ej. un cuadrado navy detras de un icono) y toma
+    el pixel de la esquina como referencia de ese color. Si la imagen ya
+    trae transparencia real (p. ej. viene de una herramienta externa de
+    quitar fondo), esa esquina suele ser (0,0,0,0) -- RGB negro con
+    alfa 0 -- y remove_flat_background terminaria tratando cualquier
+    color oscuro real del dibujo (ojos, contornos) como si fuera fondo,
+    borrandolo por error.
+    """
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+    alpha = np.array(img)[:, :, 3]
+    return (alpha == 0).mean() > threshold
+
+
 def remove_flat_background(image_bytes: bytes, tolerance: int = 90) -> tuple[bytes, tuple[int, int, int]]:
     """Quita el fondo de color plano de un logo/icono.
 
@@ -43,3 +61,21 @@ def remove_flat_background(image_bytes: bytes, tolerance: int = 90) -> tuple[byt
     buf = io.BytesIO()
     Image.fromarray(arr, "RGBA").save(buf, format="PNG")
     return buf.getvalue(), tuple(int(c) for c in bg_color)
+
+
+def binarize_alpha(image_bytes: bytes, threshold: int = 128) -> bytes:
+    """Fuerza el canal alfa a binario (0 o 255).
+
+    Si la imagen ya trae transparencia parcial de origen (p. ej. el
+    resultado de una herramienta de quitar fondo con IA, con un
+    degradado suave en el borde en vez de un corte binario), vtracer
+    traza cada nivel de alfa como una region separada: decenas de
+    anillos casi transparentes alrededor del dibujo se ven como un
+    garabato oscuro en vez de un borde limpio.
+    """
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+    arr = np.array(img)
+    arr[:, :, 3] = np.where(arr[:, :, 3] >= threshold, 255, 0)
+    buf = io.BytesIO()
+    Image.fromarray(arr, "RGBA").save(buf, format="PNG")
+    return buf.getvalue()
