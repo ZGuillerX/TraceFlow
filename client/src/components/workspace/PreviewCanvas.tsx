@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import { Info, MousePointer2, Upload } from "lucide-react";
 import empty from "@/assets/empty-state.svg";
 
@@ -54,7 +54,44 @@ export default function PreviewCanvas({
   processing,
   currentStage,
 }: PreviewCanvasProps) {
-  const progress = currentStage ? (STAGE_PROGRESS[currentStage] ?? 0) : 0;
+  const targetProgress = currentStage ? (STAGE_PROGRESS[currentStage] ?? 0) : 0;
+  const [displayedProgress, setDisplayedProgress] = useState(0);
+  const [showProgress, setShowProgress] = useState(false);
+
+  // al arrancar un proceso nuevo, reinicia el contador desde 0 y
+  // empieza a mostrar la barra.
+  useEffect(() => {
+    if (processing) {
+      setDisplayedProgress(0);
+      setShowProgress(true);
+    }
+  }, [processing]);
+
+  // si la peticion termina en error (processing vuelve a false sin que
+  // el progreso real haya llegado a "final"/100), no dejar la barra
+  // congelada esperando un objetivo que ya no va a llegar.
+  useEffect(() => {
+    if (!processing && targetProgress < 100) setShowProgress(false);
+  }, [processing, targetProgress]);
+
+  // sube el numero mostrado de a uno hasta alcanzar el progreso real
+  // (targetProgress, que llega a saltos segun las etapas del pipeline)
+  // -- asi se ve un conteo fluido en vez de saltos bruscos entre
+  // etapas. Al llegar a 100 real, un respiro breve antes de dar paso
+  // al SVG final.
+  useEffect(() => {
+    if (!showProgress) return;
+    if (displayedProgress >= targetProgress) {
+      if (targetProgress >= 100) {
+        const t = setTimeout(() => setShowProgress(false), 200);
+        return () => clearTimeout(t);
+      }
+      return;
+    }
+    const t = setTimeout(() => setDisplayedProgress(p => p + 1), 12);
+    return () => clearTimeout(t);
+  }, [showProgress, displayedProgress, targetProgress]);
+
   return (
     <section className="min-h-[560px] border border-[#cfd5e1] bg-white p-4 shadow-[0_18px_50px_rgba(16,26,70,.06)] sm:p-6">
       <div className="mb-5 flex items-center justify-between">
@@ -80,15 +117,15 @@ export default function PreviewCanvas({
       <div
         className={`paper-grid relative flex min-h-[430px] items-center justify-center overflow-hidden border border-dashed border-[#cbd3df] ${file ? "bg-[#f8fbff]" : "bg-[#fafaf7]"}`}
       >
-        {processing ? (
+        {showProgress ? (
           <div className="flex h-[380px] w-full max-w-[480px] flex-col items-center justify-center gap-4 border border-[#cfd8e6] bg-white p-6 shadow-[0_15px_35px_rgba(16,26,70,.1)]">
             <div className="font-display text-3xl font-semibold tabular-nums text-[#101A46]">
-              {progress}%
+              {displayedProgress}%
             </div>
             <div className="h-1.5 w-full max-w-[260px] overflow-hidden rounded-full bg-[#eef0f4]">
               <div
-                className="h-full rounded-full bg-[#1687F8] transition-[width] duration-500 ease-out"
-                style={{ width: `${progress}%` }}
+                className="h-full rounded-full bg-[#1687F8]"
+                style={{ width: `${displayedProgress}%` }}
               />
             </div>
             <span className="text-[11px] font-bold uppercase tracking-[.15em] text-[#7a8299]">
