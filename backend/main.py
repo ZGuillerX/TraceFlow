@@ -4,7 +4,7 @@ import re
 import tempfile
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
@@ -20,6 +20,7 @@ from pipeline.remove_background import remove_background
 from pipeline.upscale import upscale_if_small
 from pipeline.validation import validate_image
 from pipeline.vectorize import detail_to_params, vectorize
+from rate_limit import RateLimiter, client_key
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DIST_DIR = BASE_DIR / "dist"
@@ -160,15 +161,24 @@ app.add_middleware(
     expose_headers=["X-Bg-Color"],
 )
 
+# 10 peticiones por minuto por IP en los dos endpoints pesados: sin esto,
+# cualquiera puede mandar cientos de conversiones seguidas y disparar el
+# costo de CPU/tiempo del servidor (cada una puede tardar varios segundos,
+# hasta 180s en el peor caso).
+vectorize_limiter = RateLimiter(max_requests=10, window_seconds=60)
+remove_bg_limiter = RateLimiter(max_requests=10, window_seconds=60)
+
 
 @app.post("/api/vectorize")
 async def api_vectorize(
+    request: Request,
     file: UploadFile = File(...),
     detail: float = Form(72),
     colors: int = Form(8),
     remove_bg: bool = Form(False),
     auto_colors: bool = Form(True),
 ):
+    vectorize_limiter.check(client_key(request))
     source_bytes = await file.read()
     error = validate_image(file.content_type, source_bytes)
     if error:
@@ -185,7 +195,8 @@ async def api_vectorize(
 
 
 @app.post("/api/remove-background")
-async def api_remove_background(file: UploadFile = File(...)):
+async def api_remove_background(request: Request, file: UploadFile = File(...)):
+    remove_bg_limiter.check(client_key(request))
     source_bytes = await file.read()
     error = validate_image(file.content_type, source_bytes)
     if error:
