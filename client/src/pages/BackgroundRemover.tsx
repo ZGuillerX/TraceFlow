@@ -1,5 +1,5 @@
 /* TraceFlow / Vector Atelier: eliminación de fondos con checkerboard, anotaciones antes/después y acción azul eléctrica. */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   Eraser,
@@ -8,6 +8,7 @@ import {
   RotateCcw,
   Sparkles,
   Upload,
+  X,
 } from "lucide-react";
 import TraceFlowShell from "@/components/TraceFlowShell";
 import { toast } from "sonner";
@@ -20,6 +21,15 @@ export default function BackgroundRemover() {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
+  useEffect(() => {
+    if (!zoomed) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setZoomed(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [zoomed]);
   const choose = () => input.current?.click();
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -113,9 +123,7 @@ export default function BackgroundRemover() {
                   {showOriginal ? "Original" : "Resultado transparente"}
                 </div>
                 <button
-                  onClick={() =>
-                    toast.info("Vista ampliada disponible al exportar.")
-                  }
+                  onClick={() => setZoomed(true)}
                   className="absolute bottom-4 right-4 rounded-lg bg-white/90 p-2 text-[#101A46] shadow-sm hover:bg-white"
                   aria-label="Ampliar preview"
                 >
@@ -193,6 +201,26 @@ export default function BackgroundRemover() {
           </aside>
         </div>
       </div>
+      {zoomed && (
+        <div
+          onClick={() => setZoomed(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-8"
+        >
+          <button
+            onClick={() => setZoomed(false)}
+            aria-label="Cerrar vista ampliada"
+            className="absolute right-6 top-6 rounded-lg bg-white/10 p-2 text-white hover:bg-white/20"
+          >
+            <X size={20} />
+          </button>
+          <img
+            src={imgSrc}
+            alt="Vista previa ampliada"
+            onClick={e => e.stopPropagation()}
+            className={`max-h-full max-w-full object-contain ${isDemo ? "mix-blend-multiply opacity-90" : ""}`}
+          />
+        </div>
+      )}
     </TraceFlowShell>
   );
 }
