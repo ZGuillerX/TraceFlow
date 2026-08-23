@@ -51,6 +51,42 @@ class RateLimiter:
                 del self._hits[k]
 
 
+class ConcurrencyLimiter:
+    """Limita cuantas peticiones pesadas puede tener UNA MISMA IP "en
+    vuelo" al mismo tiempo -- a diferencia de RateLimiter (que limita la
+    TASA total en una ventana de tiempo), esto limita la CONCURRENCIA
+    simultanea.
+
+    Sin esto: cancelar del lado del cliente libera la UI al instante,
+    pero un hilo ya lanzado con asyncio.to_thread no se puede
+    interrumpir a medio trabajo (ver _stream_stages en routes.py) --
+    asi que generar y cancelar rapido varias veces seguidas deja cada
+    peticion anterior corriendo por su cuenta en el pool de hilos
+    compartido, compitiendo con las nuevas. Confirmado en produccion:
+    10 peticiones en 7s hicieron que una sola etapa pasara de 3s a 13s.
+    """
+
+    def __init__(self, max_concurrent: int = 1):
+        self.max_concurrent = max_concurrent
+        self._active: dict[str, int] = defaultdict(int)
+        self._lock = Lock()
+
+    def acquire(self, key: str) -> None:
+        with self._lock:
+            if self._active[key] >= self.max_concurrent:
+                raise HTTPException(
+                    429,
+                    "Ya tienes una vectorizacion en curso. Espera a que termine o cancelala antes de generar otra.",
+                )
+            self._active[key] += 1
+
+    def release(self, key: str) -> None:
+        with self._lock:
+            self._active[key] -= 1
+            if self._active[key] <= 0:
+                del self._active[key]
+
+
 def client_key(request: Request) -> str:
     """IP real del cliente, respetando X-Forwarded-For si el servidor
     corre detras de un proxy inverso (nginx, Cloudflare, etc.) -- sin

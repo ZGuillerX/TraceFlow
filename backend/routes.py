@@ -15,12 +15,16 @@ from config import (
 from pipeline.remove_background import remove_background
 from pipeline.validation import validate_image
 from pipeline.vectorize import detail_to_params
-from rate_limit import RateLimiter, client_key
+from rate_limit import ConcurrencyLimiter, RateLimiter, client_key
 from timing import log_duration
 from vectorize_service import VectorizeStage, run_vectorize, run_vectorize_stages
 
 vectorize_limiter = RateLimiter(RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_SECONDS)
 remove_bg_limiter = RateLimiter(RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_SECONDS)
+# compartido entre /api/vectorize y /api/vectorize/stream: ambos corren
+# el mismo pipeline pesado, un cliente no deberia poder eludir el
+# limite alternando entre los dos endpoints.
+vectorize_concurrency = ConcurrencyLimiter(max_concurrent=1)
 
 router = APIRouter()
 
@@ -46,8 +50,33 @@ def _advance(it: Iterator[VectorizeStage]):
     return next(it, _STREAM_DONE)
 
 
+async def _drain_remaining(it: Iterator[VectorizeStage], key: str) -> None:
+    """Sigue consumiendo el generador sincrono EN SEGUNDO PLANO hasta
+    que el trabajo pesado termine de verdad (o falle), sin yieldear
+    nada -- se usa cuando se corto el streaming antes de tiempo
+    (desconexion del cliente o timeout) y todavia queda trabajo
+    pendiente. El hilo ya lanzado via asyncio.to_thread no se puede
+    interrumpir a medio trabajo, asi que la unica forma honesta de
+    saber que el slot de concurrencia esta libre es esperar a que
+    efectivamente termine, aunque ya nadie este esperando el resultado
+    -- liberar antes permitiria que se acumulen tantos hilos zombie
+    como cancelaciones rapidas haga el cliente (visto en produccion:
+    varias cancelaciones seguidas hicieron que una sola etapa pasara
+    de 3s a 13s por la competencia en el pool de hilos compartido).
+    """
+    try:
+        while True:
+            item = await asyncio.to_thread(_advance, it)
+            if item is _STREAM_DONE:
+                return
+    except Exception:
+        pass
+    finally:
+        vectorize_concurrency.release(key)
+
+
 async def _stream_stages(
-    sync_gen: Iterator[VectorizeStage], timeout_seconds: float, request: Request
+    sync_gen: Iterator[VectorizeStage], timeout_seconds: float, request: Request, key: str
 ) -> AsyncIterator[VectorizeStage]:
     """Puentea el generador sincrono (bloqueante) de run_vectorize_stages
     a un generador async: cada paso corre en un hilo aparte via
@@ -63,24 +92,35 @@ async def _stream_stages(
     asyncio.to_thread no se puede interrumpir a medio trabajo (vtracer
     es codigo nativo bloqueante, no hay forma de pedirle que pare), pero
     si se puede evitar lanzar la SIGUIENTE etapa que aun no empezo.
+    Libera el slot de concurrencia (key) al terminar -- directo si el
+    generador se agoto por su cuenta, o via _drain_remaining si se
+    corto antes con trabajo pendiente (ver ahi el porque).
     """
     it = iter(sync_gen)
     start = time.monotonic()
-    while True:
-        if await request.is_disconnected():
-            return
-        remaining = timeout_seconds - (time.monotonic() - start)
-        if remaining <= 0:
-            yield {"stage": "error", "message": "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple."}
-            return
-        try:
-            item = await asyncio.wait_for(asyncio.to_thread(_advance, it), timeout=remaining)
-        except asyncio.TimeoutError:
-            yield {"stage": "error", "message": "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple."}
-            return
-        if item is _STREAM_DONE:
-            return
-        yield item
+    exhausted = False
+    try:
+        while True:
+            if await request.is_disconnected():
+                return
+            remaining = timeout_seconds - (time.monotonic() - start)
+            if remaining <= 0:
+                yield {"stage": "error", "message": "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple."}
+                return
+            try:
+                item = await asyncio.wait_for(asyncio.to_thread(_advance, it), timeout=remaining)
+            except asyncio.TimeoutError:
+                yield {"stage": "error", "message": "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple."}
+                return
+            if item is _STREAM_DONE:
+                exhausted = True
+                return
+            yield item
+    finally:
+        if exhausted:
+            vectorize_concurrency.release(key)
+        else:
+            asyncio.create_task(_drain_remaining(it, key))
 
 
 def _format_sse(stage: VectorizeStage) -> str:
@@ -116,13 +156,18 @@ async def api_vectorize(
     params = detail_to_params(detail, colors)
     suffix = Path(file.filename or "input.png").suffix or ".png"
 
-    label = f"POST /api/vectorize ({len(source_bytes) // 1024}KB, remove_bg={remove_bg}, auto_colors={auto_colors})"
-    with log_duration(label):
-        svg_content, bg_hex = await with_timeout(
-            asyncio.to_thread(run_vectorize, source_bytes, suffix, remove_bg, colors, auto_colors, params)
-        )
-    headers = {"X-Bg-Color": bg_hex} if bg_hex else {}
-    return Response(content=svg_content, media_type="image/svg+xml", headers=headers)
+    key = client_key(request)
+    vectorize_concurrency.acquire(key)
+    try:
+        label = f"POST /api/vectorize ({len(source_bytes) // 1024}KB, remove_bg={remove_bg}, auto_colors={auto_colors})"
+        with log_duration(label):
+            svg_content, bg_hex = await with_timeout(
+                asyncio.to_thread(run_vectorize, source_bytes, suffix, remove_bg, colors, auto_colors, params)
+            )
+        headers = {"X-Bg-Color": bg_hex} if bg_hex else {}
+        return Response(content=svg_content, media_type="image/svg+xml", headers=headers)
+    finally:
+        vectorize_concurrency.release(key)
 
 
 @router.post("/api/vectorize/stream")
@@ -147,9 +192,12 @@ async def api_vectorize_stream(
     params = detail_to_params(detail, colors)
     suffix = Path(file.filename or "input.png").suffix or ".png"
 
+    key = client_key(request)
+    vectorize_concurrency.acquire(key)
+
     async def event_stream():
         gen = run_vectorize_stages(source_bytes, suffix, remove_bg, colors, auto_colors, params)
-        async for stage in _stream_stages(gen, PROCESSING_TIMEOUT_SECONDS, request):
+        async for stage in _stream_stages(gen, PROCESSING_TIMEOUT_SECONDS, request, key):
             yield _format_sse(stage)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
