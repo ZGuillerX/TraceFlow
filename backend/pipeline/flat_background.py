@@ -5,7 +5,7 @@ from PIL import Image
 from scipy import ndimage
 
 
-def remove_flat_background(image_bytes: bytes, tolerance: int = 30) -> bytes:
+def remove_flat_background(image_bytes: bytes, tolerance: int = 90) -> bytes:
     """Quita el fondo de color plano de un logo/icono.
 
     A diferencia de un modelo de segmentacion de fotos (pensado para
@@ -15,6 +15,11 @@ def remove_flat_background(image_bytes: bytes, tolerance: int = 30) -> bytes:
     superior izquierda como color de fondo y se hace transparente solo
     la region de ese color que esta conectada al borde de la imagen
     (para no perforar detalles internos del dibujo que compartan tono).
+
+    El tolerance es generoso a proposito: muchos iconos tienen un
+    degradado/sombra suave en el fondo (no un color 100% plano), y con
+    un tolerance bajo esa variacion rompe la conexion con el borde y
+    deja "islas" del fondo sin quitar.
     """
     img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
     arr = np.array(img)
