@@ -21,6 +21,7 @@ export default function BackgroundRemover() {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const [zoomed, setZoomed] = useState(false);
   useEffect(() => {
     if (!zoomed) return;
@@ -30,6 +31,12 @@ export default function BackgroundRemover() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [zoomed]);
+  useEffect(() => {
+    if (!processing) return;
+    setElapsed(0);
+    const id = setInterval(() => setElapsed(s => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [processing]);
   const choose = () => input.current?.click();
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -190,8 +197,17 @@ export default function BackgroundRemover() {
               ) : (
                 <Eraser size={16} />
               )}{" "}
-              {processing ? "Quitando fondo…" : "Quitar fondo"}
+              {processing
+                ? `Quitando fondo… ${elapsed}s`
+                : "Quitar fondo"}
             </button>
+            {processing && elapsed >= 5 && (
+              <p className="mt-2 text-center text-[11px] leading-relaxed text-[#7a8299]">
+                La primera vez puede tardar hasta 90 segundos mientras se
+                carga el modelo de IA. Las siguientes veces será mucho más
+                rápido.
+              </p>
+            )}
             <button
               onClick={download}
               className="button-press mt-2 flex w-full items-center justify-center gap-2 border border-[#cbd3df] bg-white px-4 py-3 text-sm font-bold text-[#101A46] hover:border-[#1687F8]"
