@@ -5,7 +5,7 @@ import PreviewCanvas from "@/components/workspace/PreviewCanvas";
 import SettingsPanel from "@/components/workspace/SettingsPanel";
 import { toast } from "sonner";
 import { vectorizeImage } from "@/lib/api";
-import { recolorSvg } from "@/lib/recolor";
+import { detectColors, recolorSvg } from "@/lib/recolor";
 
 export default function Workspace() {
   const input = useRef<HTMLInputElement>(null);
@@ -16,8 +16,9 @@ export default function Workspace() {
   const [colors, setColors] = useState(8);
   const [autoColors, setAutoColors] = useState(true);
   const [removeBg, setRemoveBg] = useState(false);
-  const [customColorOn, setCustomColorOn] = useState(false);
-  const [customColor, setCustomColor] = useState("#1687F8");
+  const [colorOverrides, setColorOverrides] = useState<Record<string, string>>(
+    {}
+  );
   const [mode, setMode] = useState<"preview" | "paths">("preview");
   const [processing, setProcessing] = useState(false);
   const choose = () => input.current?.click();
@@ -29,10 +30,17 @@ export default function Workspace() {
       toast.success("Imagen cargada. Ajusta los parámetros para continuar.");
     }
   };
-  const displaySvg = useMemo(
-    () => (svg && customColorOn ? recolorSvg(svg, customColor, bgHex) : svg),
-    [svg, customColorOn, customColor, bgHex]
+  const detectedColors = useMemo(
+    () => (svg ? detectColors(svg, bgHex) : []),
+    [svg, bgHex]
   );
+  const displaySvg = useMemo(
+    () =>
+      svg ? recolorSvg(svg, detectedColors, colorOverrides, bgHex) : svg,
+    [svg, detectedColors, colorOverrides, bgHex]
+  );
+  const setColorOverride = (id: string, hex: string) =>
+    setColorOverrides(prev => ({ ...prev, [id]: hex }));
   const process = async () => {
     if (!file) return toast.info("Carga una imagen primero.");
     setProcessing(true);
@@ -45,6 +53,7 @@ export default function Workspace() {
       });
       setSvg(svg);
       setBgHex(bgHex);
+      setColorOverrides({});
       toast.success("Preview vectorial actualizada.");
     } catch (err) {
       toast.error(
@@ -110,10 +119,9 @@ export default function Workspace() {
             setColors={setColors}
             removeBg={removeBg}
             setRemoveBg={setRemoveBg}
-            customColorOn={customColorOn}
-            setCustomColorOn={setCustomColorOn}
-            customColor={customColor}
-            setCustomColor={setCustomColor}
+            detectedColors={detectedColors}
+            colorOverrides={colorOverrides}
+            setColorOverride={setColorOverride}
             processing={processing}
             process={process}
             download={download}

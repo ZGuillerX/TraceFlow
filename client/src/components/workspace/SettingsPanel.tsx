@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import type { DetectedColor } from "@/lib/recolor";
 
 interface SettingsPanelProps {
   detail: number;
@@ -21,10 +22,9 @@ interface SettingsPanelProps {
   setColors: (v: number) => void;
   removeBg: boolean;
   setRemoveBg: (v: boolean) => void;
-  customColorOn: boolean;
-  setCustomColorOn: (v: boolean) => void;
-  customColor: string;
-  setCustomColor: (v: string) => void;
+  detectedColors: DetectedColor[];
+  colorOverrides: Record<string, string>;
+  setColorOverride: (id: string, hex: string) => void;
   processing: boolean;
   process: () => void;
   download: () => void;
@@ -32,7 +32,8 @@ interface SettingsPanelProps {
 
 /** Panel de controles de trazado del workspace de vectorización: nivel
  * de detalle, grupos de color (con detección automática), quitar
- * fondo, color personalizado, y las acciones de generar/exportar. */
+ * fondo, colores del trazo detectados, y las acciones de
+ * generar/exportar. */
 export default function SettingsPanel({
   detail,
   setDetail,
@@ -42,10 +43,9 @@ export default function SettingsPanel({
   setColors,
   removeBg,
   setRemoveBg,
-  customColorOn,
-  setCustomColorOn,
-  customColor,
-  setCustomColor,
+  detectedColors,
+  colorOverrides,
+  setColorOverride,
   processing,
   process,
   download,
@@ -151,38 +151,39 @@ export default function SettingsPanel({
         fondo. Tarda unos segundos mas.
       </p>
       <div className="my-6 hairline" />
-      <div className="flex items-center justify-between gap-3">
-        <label
-          htmlFor="custom-color"
-          className="flex items-center gap-2 text-xs font-bold text-[#101A46]"
-        >
-          <Palette size={15} className="text-[#1687F8]" /> Color
-          personalizado
-        </label>
-        <Switch
-          id="custom-color"
-          checked={customColorOn}
-          onCheckedChange={setCustomColorOn}
-          className="data-[state=checked]:bg-[#1687F8]"
-        />
+      <div className="flex items-center gap-2 text-xs font-bold text-[#101A46]">
+        <Palette size={15} className="text-[#1687F8]" /> Colores del trazo
       </div>
-      {customColorOn && (
-        <div className="mt-3 flex items-center gap-3">
-          <input
-            type="color"
-            value={customColor}
-            onChange={e => setCustomColor(e.target.value)}
-            className="h-10 w-14 cursor-pointer border border-[#cbd3df] bg-white p-1"
-            aria-label="Elegir color"
-          />
-          <span className="text-xs font-bold uppercase text-[#101A46]">
-            {customColor}
-          </span>
+      <p className="mt-2 text-[11px] leading-relaxed text-[#7a8299]">
+        Cambia cualquier color conservando su sombreado. Cada selector
+        empieza en el color que ya tiene la imagen — solo toca los que
+        quieras cambiar.
+      </p>
+      {detectedColors.length === 0 ? (
+        <p className="mt-3 text-[11px] text-[#9aa1b2]">
+          Genera una preview para ver los colores del trazo.
+        </p>
+      ) : (
+        <div className="mt-3 flex flex-col gap-2">
+          {detectedColors.map(color => {
+            const current = colorOverrides[color.id] ?? `#${color.hex}`;
+            return (
+              <div key={color.id} className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={current}
+                  onChange={e => setColorOverride(color.id, e.target.value)}
+                  className="h-9 w-11 cursor-pointer border border-[#cbd3df] bg-white p-1"
+                  aria-label={`Cambiar color ${current}`}
+                />
+                <span className="text-xs font-bold uppercase text-[#101A46]">
+                  {current}
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
-      <p className="mt-2 text-[11px] leading-relaxed text-[#7a8299]">
-        Repinta el trazo a este color conservando el sombreado original.
-      </p>
       <button
         onClick={process}
         className="button-press mt-8 flex w-full items-center justify-center gap-2 bg-[#1687F8] px-4 py-3.5 text-sm font-bold text-white hover:bg-[#0e74dd]"
