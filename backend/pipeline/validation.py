@@ -1,4 +1,4 @@
-MAX_FILE_SIZE = 15 * 1024 * 1024  # 15MB
+from config import MAX_UPLOAD_SIZE_BYTES
 
 IMAGE_SIGNATURES = {
     "image/png": [b"\x89PNG\r\n\x1a\n"],
@@ -18,8 +18,8 @@ def validate_image(content_type: str | None, data: bytes) -> str | None:
     """
     if content_type not in IMAGE_SIGNATURES:
         return "Formato no soportado. Usa PNG, JPG o WEBP."
-    if len(data) > MAX_FILE_SIZE:
-        return f"El archivo supera el limite de {MAX_FILE_SIZE // (1024 * 1024)}MB."
+    if len(data) > MAX_UPLOAD_SIZE_BYTES:
+        return f"El archivo supera el limite de {MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)}MB."
     if not any(data.startswith(sig) for sig in IMAGE_SIGNATURES[content_type]):
         return "El contenido del archivo no coincide con el formato declarado."
     if content_type == "image/webp" and (len(data) < 12 or data[8:12] != b"WEBP"):

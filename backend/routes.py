@@ -4,23 +4,19 @@ from pathlib import Path
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 
+from config import (
+    PROCESSING_TIMEOUT_SECONDS,
+    RATE_LIMIT_MAX_REQUESTS,
+    RATE_LIMIT_WINDOW_SECONDS,
+)
 from pipeline.remove_background import remove_background
 from pipeline.validation import validate_image
 from pipeline.vectorize import detail_to_params
 from rate_limit import RateLimiter, client_key
 from vectorize_service import run_vectorize
 
-# El primer llamado a rembg carga el modelo BiRefNet (~90s en CPU) antes de
-# procesar; despues queda cacheado en memoria y cada imagen tarda unos
-# segundos. El timeout cubre ese arranque en frio.
-PROCESSING_TIMEOUT_SECONDS = 180
-
-# 10 peticiones por minuto por IP en los dos endpoints pesados: sin esto,
-# cualquiera puede mandar cientos de conversiones seguidas y disparar el
-# costo de CPU/tiempo del servidor (cada una puede tardar varios segundos,
-# hasta 180s en el peor caso).
-vectorize_limiter = RateLimiter(max_requests=10, window_seconds=60)
-remove_bg_limiter = RateLimiter(max_requests=10, window_seconds=60)
+vectorize_limiter = RateLimiter(RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_SECONDS)
+remove_bg_limiter = RateLimiter(RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_SECONDS)
 
 router = APIRouter()
 
