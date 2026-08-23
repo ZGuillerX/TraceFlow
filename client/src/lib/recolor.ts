@@ -152,12 +152,21 @@ export function detectColors(
 }
 
 /** Repinta el SVG segun overrides: para cada color detectado con una
- * entrada en overrides (por su id), cambia el matiz de todos sus
- * miembros al del color elegido, conservando la luminosidad original
- * de cada uno (mantiene el sombreado/degradado en vez de aplanarlo).
- * Los colores sin entrada en overrides quedan intactos -- asi el
- * usuario puede cambiar solo el color que le interesa, no todos a la
- * vez. excludeHex deja intacto el fondo (modo "con fondo"). */
+ * entrada en overrides (por su id), cambia todos sus miembros al color
+ * elegido. La luminosidad se recentra en la del color elegido (no en
+ * la original) para que un color vivo se vea vivo de verdad -- si se
+ * conservara la luminosidad original, un grupo oscuro (p. ej. casi
+ * negro) siempre saldria oscuro sin importar que tan brillante fuera
+ * el color elegido, y elegir blanco puro (sin saturacion) devolveria
+ * un gris oscuro en vez de blanco. Lo que si se conserva es el
+ * desplazamiento de luminosidad de cada miembro RESPECTO al color
+ * representativo del grupo (el que se ve en el selector) -- asi una
+ * banda de sombra/brillo dentro del mismo trazo se mantiene mas
+ * oscura/clara que el resto, solo que centrada en el nuevo color en
+ * vez de en el original. Los colores sin entrada en overrides quedan
+ * intactos -- asi el usuario puede cambiar solo el color que le
+ * interesa, no todos a la vez. excludeHex deja intacto el fondo (modo
+ * "con fondo"). */
 export function recolorSvg(
   svg: string,
   colors: DetectedColor[],
@@ -166,13 +175,16 @@ export function recolorSvg(
 ): string {
   const exclude = excludeHex?.replace("#", "").toUpperCase();
 
-  const targetByMember = new Map<string, [number, number]>();
+  const targetByMember = new Map<string, [number, number, number]>();
   for (const color of colors) {
     const target = overrides[color.id];
     if (!target) continue;
-    const [targetH, , targetS] = rgbToHsl(...hexToRgb(target));
+    const [targetH, targetS, targetL] = rgbToHsl(...hexToRgb(target));
+    const [, , representativeL] = rgbToHsl(...hexToRgb(color.hex));
     for (const member of color.members) {
-      targetByMember.set(member, [targetH, targetS]);
+      const [, , memberL] = rgbToHsl(...hexToRgb(member));
+      const recentered = targetL + (memberL - representativeL);
+      targetByMember.set(member, [targetH, targetS, recentered]);
     }
   }
 
@@ -181,8 +193,8 @@ export function recolorSvg(
     if (upper === exclude) return match;
     const target = targetByMember.get(upper);
     if (!target) return match;
-    const [, , lightness] = rgbToHsl(...hexToRgb(hex));
-    const [nr, ng, nb] = hslToRgb(target[0], target[1], lightness);
+    const [h, s, l] = target;
+    const [nr, ng, nb] = hslToRgb(h, s, Math.min(1, Math.max(0, l)));
     return `fill="#${toHex(nr)}${toHex(ng)}${toHex(nb)}"`;
   });
 }
