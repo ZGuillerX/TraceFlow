@@ -1,4 +1,4 @@
-import { useEffect, useState, type RefObject } from "react";
+import type { RefObject } from "react";
 import { Info, MousePointer2, Upload } from "lucide-react";
 import empty from "@/assets/empty-state.svg";
 
@@ -24,14 +24,18 @@ const STAGE_LABELS: Record<string, string> = {
   final: "Trazando curvas",
 };
 
-// tope del progreso "estimado" mientras el trabajo real sigue en curso.
-// Las etapas del pipeline no llegan a ritmo constante (unas tardan
-// milisegundos, otras varios segundos), asi que atar el numero 1:1 a
-// cada etapa real se sentia como que se "pegaba" esperando la
-// siguiente -- en vez de eso el numero sube solo, sin parar, hasta
-// este techo, y solo cuando el evento "final" realmente llega
-// completa rapido el resto hasta 100.
-const PROGRESS_CAP = 95;
+// las etapas que puede mandar el backend difieren segun el modo (con o
+// sin quitar fondo, ver run_vectorize_stages en vectorize_service.py),
+// pero en ambos casos son 5 pasos que avanzan de forma monotona hasta
+// "final" -- no hace falta saber el modo de antemano para calcular el %.
+const STAGE_PROGRESS: Record<string, number> = {
+  original: 10,
+  ampliada: 30,
+  sin_fondo: 55,
+  colores: 70,
+  bordes_suaves: 85,
+  final: 100,
+};
 
 /** Lienzo de preview del workspace de vectorización: dropzone antes de
  * cargar una imagen, silueta de "lista para vectorizar" con el archivo
@@ -50,44 +54,7 @@ export default function PreviewCanvas({
   processing,
   currentStage,
 }: PreviewCanvasProps) {
-  const isFinal = currentStage === "final";
-  const [displayedProgress, setDisplayedProgress] = useState(0);
-  const [showProgress, setShowProgress] = useState(false);
-
-  // al arrancar un proceso nuevo, reinicia el contador desde 0 y
-  // empieza a mostrar la barra.
-  useEffect(() => {
-    if (processing) {
-      setDisplayedProgress(0);
-      setShowProgress(true);
-    }
-  }, [processing]);
-
-  // si la peticion termina en error (processing vuelve a false sin que
-  // haya llegado el evento "final"), no dejar la barra congelada
-  // esperando algo que ya no va a llegar.
-  useEffect(() => {
-    if (!processing && !isFinal) setShowProgress(false);
-  }, [processing, isFinal]);
-
-  // sube el numero de a uno sin parar mientras el trabajo real sigue
-  // en curso (tope en PROGRESS_CAP, ver comentario arriba). En cuanto
-  // llega el evento "final" acelera y completa hasta 100, con un
-  // respiro breve antes de dar paso al SVG.
-  useEffect(() => {
-    if (!showProgress) return;
-    const cap = isFinal ? 100 : PROGRESS_CAP;
-    if (displayedProgress >= cap) {
-      if (isFinal) {
-        const t = setTimeout(() => setShowProgress(false), 200);
-        return () => clearTimeout(t);
-      }
-      return;
-    }
-    const t = setTimeout(() => setDisplayedProgress(p => p + 1), isFinal ? 8 : 40);
-    return () => clearTimeout(t);
-  }, [showProgress, displayedProgress, isFinal]);
-
+  const progress = currentStage ? (STAGE_PROGRESS[currentStage] ?? 0) : 0;
   return (
     <section className="min-h-[560px] border border-[#cfd5e1] bg-white p-4 shadow-[0_18px_50px_rgba(16,26,70,.06)] sm:p-6">
       <div className="mb-5 flex items-center justify-between">
@@ -113,15 +80,15 @@ export default function PreviewCanvas({
       <div
         className={`paper-grid relative flex min-h-[430px] items-center justify-center overflow-hidden border border-dashed border-[#cbd3df] ${file ? "bg-[#f8fbff]" : "bg-[#fafaf7]"}`}
       >
-        {showProgress ? (
+        {processing ? (
           <div className="flex h-[380px] w-full max-w-[480px] flex-col items-center justify-center gap-4 border border-[#cfd8e6] bg-white p-6 shadow-[0_15px_35px_rgba(16,26,70,.1)]">
             <div className="font-display text-3xl font-semibold tabular-nums text-[#101A46]">
-              {displayedProgress}%
+              {progress}%
             </div>
             <div className="h-1.5 w-full max-w-[260px] overflow-hidden rounded-full bg-[#eef0f4]">
               <div
-                className="h-full rounded-full bg-[#1687F8]"
-                style={{ width: `${displayedProgress}%` }}
+                className="h-full rounded-full bg-[#1687F8] transition-[width] duration-500 ease-out"
+                style={{ width: `${progress}%` }}
               />
             </div>
             <span className="text-[11px] font-bold uppercase tracking-[.15em] text-[#7a8299]">
