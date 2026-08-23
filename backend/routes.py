@@ -50,7 +50,7 @@ def _advance(it: Iterator[VectorizeStage]):
     return next(it, _STREAM_DONE)
 
 
-async def _drain_remaining(it: Iterator[VectorizeStage], key: str) -> None:
+async def _drain_remaining(it: Iterator[VectorizeStage], key: str, pending: "asyncio.Task | None" = None) -> None:
     """Sigue consumiendo el generador sincrono EN SEGUNDO PLANO hasta
     que el trabajo pesado termine de verdad (o falle), sin yieldear
     nada -- se usa cuando se corto el streaming antes de tiempo
@@ -63,8 +63,19 @@ async def _drain_remaining(it: Iterator[VectorizeStage], key: str) -> None:
     como cancelaciones rapidas haga el cliente (visto en produccion:
     varias cancelaciones seguidas hicieron que una sola etapa pasara
     de 3s a 13s por la competencia en el pool de hilos compartido).
+
+    `pending`, si se pasa, es una llamada a _advance(it) que YA estaba
+    en vuelo (protegida con asyncio.shield, ver _stream_stages) cuando
+    se corto el streaming -- hay que esperar ESA antes de seguir
+    llamando a _advance de nuevo, nunca en paralelo: un generador
+    sincrono no es reentrante, next(it) desde dos lugares a la vez
+    lanza "ValueError: generator already executing".
     """
     try:
+        if pending is not None:
+            item = await pending
+            if item is _STREAM_DONE:
+                return
         while True:
             item = await asyncio.to_thread(_advance, it)
             if item is _STREAM_DONE:
@@ -92,6 +103,18 @@ async def _stream_stages(
     asyncio.to_thread no se puede interrumpir a medio trabajo (vtracer
     es codigo nativo bloqueante, no hay forma de pedirle que pare), pero
     si se puede evitar lanzar la SIGUIENTE etapa que aun no empezo.
+
+    La espera de cada etapa esta protegida con asyncio.shield: si
+    Starlette cancela esta corrutina a medio await (detecto el cierre
+    del socket antes de que mi propio chequeo de is_disconnected() lo
+    note), shield evita que esa cancelacion se propague al Future
+    interno de asyncio.to_thread -- sin esto, la cancelacion deja el
+    hilo de trabajo corriendo zombie mientras el codigo de aqui sigue
+    de largo, y cualquier intento posterior de volver a llamar
+    _advance(it) sobre el MISMO generador choca con el que sigue en
+    vuelo (ver _drain_remaining). Con shield conservamos la Task y se
+    la pasamos a _drain_remaining para esperarla ahi en vez de perderla.
+
     Libera el slot de concurrencia (key) al terminar -- directo si el
     generador se agoto por su cuenta, o via _drain_remaining si se
     corto antes con trabajo pendiente (ver ahi el porque).
@@ -99,6 +122,7 @@ async def _stream_stages(
     it = iter(sync_gen)
     start = time.monotonic()
     exhausted = False
+    pending: asyncio.Task | None = None
     try:
         while True:
             if await request.is_disconnected():
@@ -107,11 +131,13 @@ async def _stream_stages(
             if remaining <= 0:
                 yield {"stage": "error", "message": "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple."}
                 return
+            pending = asyncio.ensure_future(asyncio.to_thread(_advance, it))
             try:
-                item = await asyncio.wait_for(asyncio.to_thread(_advance, it), timeout=remaining)
+                item = await asyncio.wait_for(asyncio.shield(pending), timeout=remaining)
             except asyncio.TimeoutError:
                 yield {"stage": "error", "message": "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple."}
                 return
+            pending = None
             if item is _STREAM_DONE:
                 exhausted = True
                 return
@@ -120,7 +146,7 @@ async def _stream_stages(
         if exhausted:
             vectorize_concurrency.release(key)
         else:
-            asyncio.create_task(_drain_remaining(it, key))
+            asyncio.create_task(_drain_remaining(it, key, pending))
 
 
 def _format_sse(stage: VectorizeStage) -> str:
