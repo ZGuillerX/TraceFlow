@@ -24,18 +24,14 @@ const STAGE_LABELS: Record<string, string> = {
   final: "Trazando curvas",
 };
 
-// las etapas que puede mandar el backend difieren segun el modo (con o
-// sin quitar fondo, ver run_vectorize_stages en vectorize_service.py),
-// pero en ambos casos son 5 pasos que avanzan de forma monotona hasta
-// "final" -- no hace falta saber el modo de antemano para calcular el %.
-const STAGE_PROGRESS: Record<string, number> = {
-  original: 10,
-  ampliada: 30,
-  sin_fondo: 55,
-  colores: 70,
-  bordes_suaves: 85,
-  final: 100,
-};
+// tope del progreso "estimado" mientras el trabajo real sigue en curso.
+// Las etapas del pipeline no llegan a ritmo constante (unas tardan
+// milisegundos, otras varios segundos), asi que atar el numero 1:1 a
+// cada etapa real se sentia como que se "pegaba" esperando la
+// siguiente -- en vez de eso el numero sube solo, sin parar, hasta
+// este techo, y solo cuando el evento "final" realmente llega
+// completa rapido el resto hasta 100.
+const PROGRESS_CAP = 95;
 
 /** Lienzo de preview del workspace de vectorización: dropzone antes de
  * cargar una imagen, silueta de "lista para vectorizar" con el archivo
@@ -54,7 +50,7 @@ export default function PreviewCanvas({
   processing,
   currentStage,
 }: PreviewCanvasProps) {
-  const targetProgress = currentStage ? (STAGE_PROGRESS[currentStage] ?? 0) : 0;
+  const isFinal = currentStage === "final";
   const [displayedProgress, setDisplayedProgress] = useState(0);
   const [showProgress, setShowProgress] = useState(false);
 
@@ -68,29 +64,29 @@ export default function PreviewCanvas({
   }, [processing]);
 
   // si la peticion termina en error (processing vuelve a false sin que
-  // el progreso real haya llegado a "final"/100), no dejar la barra
-  // congelada esperando un objetivo que ya no va a llegar.
+  // haya llegado el evento "final"), no dejar la barra congelada
+  // esperando algo que ya no va a llegar.
   useEffect(() => {
-    if (!processing && targetProgress < 100) setShowProgress(false);
-  }, [processing, targetProgress]);
+    if (!processing && !isFinal) setShowProgress(false);
+  }, [processing, isFinal]);
 
-  // sube el numero mostrado de a uno hasta alcanzar el progreso real
-  // (targetProgress, que llega a saltos segun las etapas del pipeline)
-  // -- asi se ve un conteo fluido en vez de saltos bruscos entre
-  // etapas. Al llegar a 100 real, un respiro breve antes de dar paso
-  // al SVG final.
+  // sube el numero de a uno sin parar mientras el trabajo real sigue
+  // en curso (tope en PROGRESS_CAP, ver comentario arriba). En cuanto
+  // llega el evento "final" acelera y completa hasta 100, con un
+  // respiro breve antes de dar paso al SVG.
   useEffect(() => {
     if (!showProgress) return;
-    if (displayedProgress >= targetProgress) {
-      if (targetProgress >= 100) {
+    const cap = isFinal ? 100 : PROGRESS_CAP;
+    if (displayedProgress >= cap) {
+      if (isFinal) {
         const t = setTimeout(() => setShowProgress(false), 200);
         return () => clearTimeout(t);
       }
       return;
     }
-    const t = setTimeout(() => setDisplayedProgress(p => p + 1), 12);
+    const t = setTimeout(() => setDisplayedProgress(p => p + 1), isFinal ? 8 : 40);
     return () => clearTimeout(t);
-  }, [showProgress, displayedProgress, targetProgress]);
+  }, [showProgress, displayedProgress, isFinal]);
 
   return (
     <section className="min-h-[560px] border border-[#cfd5e1] bg-white p-4 shadow-[0_18px_50px_rgba(16,26,70,.06)] sm:p-6">
