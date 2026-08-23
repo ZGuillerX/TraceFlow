@@ -2,6 +2,7 @@ import io
 import re
 import tempfile
 from pathlib import Path
+from typing import Iterator, TypedDict
 
 from PIL import Image
 
@@ -14,6 +15,13 @@ from pipeline.quantize import detect_color_count, quantize_colors, smooth_flat_e
 from pipeline.upscale import upscale_if_small
 from pipeline.vectorize import vectorize
 from timing import log_duration
+
+
+class VectorizeStage(TypedDict, total=False):
+    stage: str
+    image: bytes
+    svg: str
+    bg_hex: str | None
 
 
 def ensure_viewbox(svg: str) -> str:
@@ -30,14 +38,19 @@ def ensure_viewbox(svg: str) -> str:
     return re.sub(r"<svg\b", f'<svg viewBox="0 0 {w} {h}"', svg, count=1)
 
 
-def run_vectorize(
+def run_vectorize_stages(
     source_bytes: bytes, suffix: str, remove_bg: bool, colors: int, auto_colors: bool, params: dict
-) -> tuple[str, str | None]:
-    """Trabajo sincrono (bloqueante) que corre en un hilo aparte via
-    asyncio.to_thread, para no congelar el event loop de FastAPI mientras
-    vtracer/rembg procesan la imagen. Devuelve (svg, bg_hex) — bg_hex es
-    el color de fondo visible (modo "con fondo") para que el frontend
-    sepa que color NO tocar si el usuario recolorea el trazo."""
+) -> Iterator[VectorizeStage]:
+    """Version generador de run_vectorize: yield de una imagen PNG por
+    cada etapa del pipeline segun se completa (para el preview en vivo
+    del proceso), terminando con la etapa "final" que trae el SVG.
+
+    Trabajo sincrono (bloqueante) -- pensado para consumirse desde un
+    hilo aparte (ver _stream_stages en routes.py), para no congelar el
+    event loop de FastAPI mientras vtracer/rembg procesan la imagen.
+    """
+    yield {"stage": "original", "image": source_bytes}
+
     bg_hex = None
     if remove_bg:
         # imagenes chicas (iconos/capturas de pocos px) no traen suficiente
@@ -46,6 +59,7 @@ def run_vectorize(
         # modelo de super-resolucion que reconstruya detalle plausible.
         with log_duration("upscale (sin fondo)"):
             source_bytes, scale = upscale_if_small(source_bytes)
+        yield {"stage": "ampliada", "image": source_bytes}
 
         if has_existing_transparency(source_bytes):
             # la imagen ya viene recortada (transparencia real de origen,
@@ -65,6 +79,8 @@ def run_vectorize(
         # de alfa como su propia region: se ve como un garabato oscuro
         # alrededor del dibujo en vez de un borde limpio.
         source_bytes = binarize_alpha(source_bytes)
+        yield {"stage": "sin_fondo", "image": source_bytes}
+
         # el degradado/antialiasing del dibujo deja cientos de tonos casi
         # iguales; sin esto vtracer traza cada uno como su propia mancha.
         # Aqui se reduce a un puñado de colores planos antes de vectorizar.
@@ -77,6 +93,7 @@ def run_vectorize(
             num_colors = max(2, min(20, round(colors * 0.4)))
         with log_duration("cuantizar colores (sin fondo)"):
             source_bytes = quantize_colors(source_bytes, num_colors, bg_color)
+        yield {"stage": "colores", "image": source_bytes}
         # con la imagen ya reducida a colores planos, un color_precision
         # alto hace que vtracer re-fragmente el degradado en vez de
         # respetar los colores ya limpios (mas notorio mientras mas grande
@@ -101,6 +118,7 @@ def run_vectorize(
         bg_hex = "{:02X}{:02X}{:02X}".format(*original_bg)
         with log_duration("upscale (con fondo)"):
             source_bytes, scale = upscale_if_small(source_bytes, original_bg)
+        yield {"stage": "ampliada", "image": source_bytes}
         if auto_colors:
             with log_duration("detectar colores"):
                 num_colors = detect_color_count(source_bytes, original_bg)
@@ -110,10 +128,12 @@ def run_vectorize(
             num_colors = max(2, min(20, round(colors * 0.4)))
         with log_duration("cuantizar colores (con fondo)"):
             source_bytes = quantize_colors(source_bytes, num_colors, original_bg)
+        yield {"stage": "colores", "image": source_bytes}
         # sin transparencia de por medio (todo opaco, con fondo), es
         # seguro suavizar el borde en escalera entre regiones de color
         with log_duration("suavizar bordes"):
             source_bytes = smooth_flat_edges(source_bytes)
+        yield {"stage": "bordes_suaves", "image": source_bytes}
         params = {
             **params,
             # ver comentario equivalente en la rama remove_bg: con muchos
@@ -135,4 +155,19 @@ def run_vectorize(
             vectorize(str(in_path), str(out_path), **params)
 
         svg = out_path.read_text(encoding="utf-8")
-        return ensure_viewbox(svg), bg_hex
+        yield {"stage": "final", "svg": ensure_viewbox(svg), "bg_hex": bg_hex}
+
+
+def run_vectorize(
+    source_bytes: bytes, suffix: str, remove_bg: bool, colors: int, auto_colors: bool, params: dict
+) -> tuple[str, str | None]:
+    """Wrapper sin streaming sobre run_vectorize_stages, para el endpoint
+    /api/vectorize que solo necesita el resultado final. Corre en un
+    hilo aparte via asyncio.to_thread. Devuelve (svg, bg_hex) — bg_hex
+    es el color de fondo visible (modo "con fondo") para que el
+    frontend sepa que color NO tocar si el usuario recolorea el trazo.
+    """
+    for stage in run_vectorize_stages(source_bytes, suffix, remove_bg, colors, auto_colors, params):
+        if stage["stage"] == "final":
+            return stage["svg"], stage.get("bg_hex")
+    raise RuntimeError("run_vectorize_stages no genero una etapa final")
