@@ -4,13 +4,17 @@ import re
 import tempfile
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, Form
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
-from pipeline.flat_background import binarize_alpha, has_existing_transparency, remove_flat_background
+from pipeline.flat_background import (
+    binarize_alpha,
+    has_existing_transparency,
+    remove_flat_background,
+)
 from pipeline.quantize import detect_color_count, quantize_colors, smooth_flat_edges
 from pipeline.remove_background import remove_background
 from pipeline.upscale import upscale_if_small
@@ -142,8 +146,8 @@ def run_vectorize(
 async def with_timeout(coro):
     try:
         return await asyncio.wait_for(coro, timeout=PROCESSING_TIMEOUT_SECONDS)
-    except asyncio.TimeoutError:
-        raise HTTPException(504, "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple.")
+    except asyncio.TimeoutError as e:
+        raise HTTPException(504, "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple.") from e
 
 
 app = FastAPI(title="TraceFlow API")

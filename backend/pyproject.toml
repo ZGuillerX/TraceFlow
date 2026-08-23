@@ -1,0 +1,13 @@
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+# E501 (linea larga): el codigo existente no sigue un limite de 88
+# caracteres, y reformatear todo el proyecto para cumplirlo esta fuera
+# de alcance de agregar CI -- se ignora en vez de forzar un reformateo
+# masivo sin relacion con el objetivo de este chequeo.
+ignore = ["E501"]
+
+[tool.ruff.lint.flake8-bugbear]
+# File(...)/Form(...)/Depends(...) como default de argumento es el patron
+# de inyeccion de dependencias de FastAPI, no el problema que B008 detecta
+# normalmente (un valor mutable evaluado una sola vez al importar).
+extend-immutable-calls = ["fastapi.File", "fastapi.Form", "fastapi.Depends", "fastapi.Query"]
