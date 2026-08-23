@@ -152,7 +152,7 @@ export default function BackgroundRemover() {
             <input
               ref={input}
               type="file"
-              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              accept="image/png,image/jpeg,image/webp"
               onChange={onFile}
               className="hidden"
             />
@@ -170,7 +170,7 @@ export default function BackgroundRemover() {
                 entrada
               </div>
               <p className="mt-2 text-[11px] leading-relaxed text-[#7a8299]">
-                PNG, JPG, WEBP o SVG hasta 25 MB.
+                PNG, JPG o WEBP hasta 15 MB.
               </p>
             </div>
             <button
