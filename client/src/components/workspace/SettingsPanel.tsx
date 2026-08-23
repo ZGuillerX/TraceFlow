@@ -12,6 +12,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import type { DetectedColor } from "@/lib/recolor";
+import ColorInput from "./ColorInput";
 
 interface SettingsPanelProps {
   detail: number;
@@ -168,18 +169,12 @@ export default function SettingsPanel({
           {detectedColors.map(color => {
             const current = colorOverrides[color.id] ?? `#${color.hex}`;
             return (
-              <div key={color.id} className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={current}
-                  onChange={e => setColorOverride(color.id, e.target.value)}
-                  className="h-9 w-11 cursor-pointer border border-[#cbd3df] bg-white p-1"
-                  aria-label={`Cambiar color ${current}`}
-                />
-                <span className="text-xs font-bold uppercase text-[#101A46]">
-                  {current}
-                </span>
-              </div>
+              <ColorInput
+                key={color.id}
+                value={current}
+                onChange={hex => setColorOverride(color.id, hex)}
+                label={current}
+              />
             );
           })}
         </div>
