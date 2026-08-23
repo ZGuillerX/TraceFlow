@@ -13,6 +13,7 @@ from pipeline.remove_background import remove_background
 from pipeline.validation import validate_image
 from pipeline.vectorize import detail_to_params
 from rate_limit import RateLimiter, client_key
+from timing import log_duration
 from vectorize_service import run_vectorize
 
 vectorize_limiter = RateLimiter(RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_SECONDS)
@@ -46,9 +47,11 @@ async def api_vectorize(
     params = detail_to_params(detail, colors)
     suffix = Path(file.filename or "input.png").suffix or ".png"
 
-    svg_content, bg_hex = await with_timeout(
-        asyncio.to_thread(run_vectorize, source_bytes, suffix, remove_bg, colors, auto_colors, params)
-    )
+    label = f"POST /api/vectorize ({len(source_bytes) // 1024}KB, remove_bg={remove_bg}, auto_colors={auto_colors})"
+    with log_duration(label):
+        svg_content, bg_hex = await with_timeout(
+            asyncio.to_thread(run_vectorize, source_bytes, suffix, remove_bg, colors, auto_colors, params)
+        )
     headers = {"X-Bg-Color": bg_hex} if bg_hex else {}
     return Response(content=svg_content, media_type="image/svg+xml", headers=headers)
 
@@ -61,5 +64,7 @@ async def api_remove_background(request: Request, file: UploadFile = File(...)):
     if error:
         raise HTTPException(400, error)
 
-    png_bytes = await with_timeout(asyncio.to_thread(remove_background, source_bytes))
+    label = f"POST /api/remove-background ({len(source_bytes) // 1024}KB)"
+    with log_duration(label):
+        png_bytes = await with_timeout(asyncio.to_thread(remove_background, source_bytes))
     return Response(content=png_bytes, media_type="image/png")

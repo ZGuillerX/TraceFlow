@@ -5,6 +5,8 @@ import numpy as np
 import torch
 from PIL import Image
 
+from timing import log_duration
+
 MODEL_NAME = "eugenesiow/edsr-base"
 MODEL_SCALE = 4
 MAX_PASSES = 3
@@ -12,20 +14,26 @@ MAX_PASSES = 3
 
 @lru_cache(maxsize=1)
 def get_model():
-    from super_image import EdsrModel
+    # cacheado con lru_cache: solo la primera vez descarga/carga el
+    # modelo EDSR. El log de aca separa ese costo del de la inferencia
+    # en si (_run_model), para saber si una peticion lenta fue por el
+    # arranque en frio o por la imagen.
+    with log_duration("cargar modelo EDSR (arranque en frio)"):
+        from super_image import EdsrModel
 
-    model = EdsrModel.from_pretrained(MODEL_NAME, scale=MODEL_SCALE)
-    model.eval()
-    return model
+        model = EdsrModel.from_pretrained(MODEL_NAME, scale=MODEL_SCALE)
+        model.eval()
+        return model
 
 
 def _run_model(rgb: Image.Image) -> Image.Image:
     model = get_model()
-    tensor = torch.from_numpy(np.array(rgb)).permute(2, 0, 1).float().unsqueeze(0) / 255.0
-    with torch.no_grad():
-        out = model(tensor)
-    out = out.squeeze(0).clamp(0, 1).permute(1, 2, 0).numpy()
-    return Image.fromarray((out * 255).round().astype(np.uint8), "RGB")
+    with log_duration("super-resolucion (inferencia, 1 pasada)"):
+        tensor = torch.from_numpy(np.array(rgb)).permute(2, 0, 1).float().unsqueeze(0) / 255.0
+        with torch.no_grad():
+            out = model(tensor)
+        out = out.squeeze(0).clamp(0, 1).permute(1, 2, 0).numpy()
+        return Image.fromarray((out * 255).round().astype(np.uint8), "RGB")
 
 
 def upscale_if_small(

@@ -13,6 +13,7 @@ from pipeline.flat_background import (
 from pipeline.quantize import detect_color_count, quantize_colors, smooth_flat_edges
 from pipeline.upscale import upscale_if_small
 from pipeline.vectorize import vectorize
+from timing import log_duration
 
 
 def ensure_viewbox(svg: str) -> str:
@@ -43,7 +44,8 @@ def run_vectorize(
         # informacion para que vtracer dibuje curvas suaves en detalles
         # pequenos; un simple resize no ayuda (ya se probo), hace falta un
         # modelo de super-resolucion que reconstruya detalle plausible.
-        source_bytes, scale = upscale_if_small(source_bytes)
+        with log_duration("upscale (sin fondo)"):
+            source_bytes, scale = upscale_if_small(source_bytes)
 
         if has_existing_transparency(source_bytes):
             # la imagen ya viene recortada (transparencia real de origen,
@@ -55,7 +57,8 @@ def run_vectorize(
             # por parecerse a ese negro.
             bg_color = None
         else:
-            source_bytes, bg_color = remove_flat_background(source_bytes)
+            with log_duration("quitar fondo plano"):
+                source_bytes, bg_color = remove_flat_background(source_bytes)
         # si la imagen ya traia transparencia parcial de origen (p. ej.
         # viene de la herramienta de quitar fondo con IA, con un borde
         # degradado en vez de un corte binario), vtracer traza cada nivel
@@ -66,12 +69,14 @@ def run_vectorize(
         # iguales; sin esto vtracer traza cada uno como su propia mancha.
         # Aqui se reduce a un puñado de colores planos antes de vectorizar.
         if auto_colors:
-            num_colors = detect_color_count(source_bytes, bg_color)
+            with log_duration("detectar colores"):
+                num_colors = detect_color_count(source_bytes, bg_color)
         else:
             # tope en 20 (antes 8): con el slider al maximo alcanza para
             # iconos con varios colores reales distintos, no solo 1-2
             num_colors = max(2, min(20, round(colors * 0.4)))
-        source_bytes = quantize_colors(source_bytes, num_colors, bg_color)
+        with log_duration("cuantizar colores (sin fondo)"):
+            source_bytes = quantize_colors(source_bytes, num_colors, bg_color)
         # con la imagen ya reducida a colores planos, un color_precision
         # alto hace que vtracer re-fragmente el degradado en vez de
         # respetar los colores ya limpios (mas notorio mientras mas grande
@@ -94,14 +99,17 @@ def run_vectorize(
         # manchas de color en el borde.
         original_bg = tuple(int(c) for c in Image.open(io.BytesIO(source_bytes)).convert("RGBA").getpixel((0, 0))[:3])
         bg_hex = "{:02X}{:02X}{:02X}".format(*original_bg)
-        source_bytes, scale = upscale_if_small(source_bytes, original_bg)
+        with log_duration("upscale (con fondo)"):
+            source_bytes, scale = upscale_if_small(source_bytes, original_bg)
         if auto_colors:
-            num_colors = detect_color_count(source_bytes, original_bg)
+            with log_duration("detectar colores"):
+                num_colors = detect_color_count(source_bytes, original_bg)
         else:
             # tope en 20 (antes 8): con el slider al maximo alcanza para
             # iconos con varios colores reales distintos, no solo 1-2
             num_colors = max(2, min(20, round(colors * 0.4)))
-        source_bytes = quantize_colors(source_bytes, num_colors, original_bg)
+        with log_duration("cuantizar colores (con fondo)"):
+            source_bytes = quantize_colors(source_bytes, num_colors, original_bg)
         # sin transparencia de por medio (todo opaco, con fondo), es
         # seguro suavizar el borde en escalera entre regiones de color
         source_bytes = smooth_flat_edges(source_bytes)
@@ -122,7 +130,8 @@ def run_vectorize(
         out_path = Path(tmp) / "output.svg"
 
         in_path.write_bytes(source_bytes)
-        vectorize(str(in_path), str(out_path), **params)
+        with log_duration("vtracer"):
+            vectorize(str(in_path), str(out_path), **params)
 
         svg = out_path.read_text(encoding="utf-8")
         return ensure_viewbox(svg), bg_hex
