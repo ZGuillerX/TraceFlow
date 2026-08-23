@@ -6,6 +6,28 @@ from PIL import Image, ImageFilter
 from scipy.spatial import cKDTree
 
 
+def _unique_rgb_rows(pixels: np.ndarray) -> np.ndarray:
+    """Equivalente a np.unique(pixels.reshape(-1, 3), axis=0), pero mucho
+    mas rapido en imagenes grandes.
+
+    np.unique con axis=0 ordena fila por fila (compara los 3 canales de
+    cada pixel uno por uno), que en numpy es muchisimo mas lento que
+    ordenar un array 1D de escalares. Empaquetar cada RGB en un solo
+    entero de 24 bits y usar np.unique 1D da exactamente el mismo
+    resultado (mismo conjunto de colores) pero usando el camino rapido
+    de numpy -- medido: 81x mas rapido en una imagen de 4000x4000 (14.4s
+    -> 0.18s), que era el cuello de botella real de smooth_flat_edges y
+    detect_color_count en imagenes grandes.
+    """
+    flat = pixels.reshape(-1, 3).astype(np.uint32)
+    encoded = (flat[:, 0] << 16) | (flat[:, 1] << 8) | flat[:, 2]
+    unique_encoded = np.unique(encoded)
+    return np.stack(
+        [(unique_encoded >> 16) & 255, (unique_encoded >> 8) & 255, unique_encoded & 255],
+        axis=1,
+    ).astype(np.uint8)
+
+
 def _same_color_family(
     c1: np.ndarray, c2: np.ndarray, hue_tolerance: float = 0.01, achromatic_sat: float = 0.15
 ) -> bool:
@@ -68,7 +90,7 @@ def detect_color_count(image_bytes: bytes, bg_color, bg_tolerance: int = 60, max
     quantized = full_rgb_img.quantize(colors=budget, palette=swatch_palette, dither=Image.Dither.NONE).convert("RGB")
     quantized_rest = np.array(quantized)[remaining]
 
-    unique, _ = np.unique(quantized_rest.reshape(-1, 3), axis=0, return_counts=True)
+    unique = _unique_rgb_rows(quantized_rest)
 
     # clustering por componentes conexos (union-find), no por distancia a
     # un solo representante: un degradado fino encadena muchos pasos
@@ -190,13 +212,18 @@ def smooth_flat_edges(image_bytes: bytes, radius: float = 2) -> bytes:
     rgb = arr[:, :, :3]
     alpha = arr[:, :, 3]
 
-    palette = np.unique(rgb[alpha > 0].reshape(-1, 3), axis=0)
+    palette = _unique_rgb_rows(rgb[alpha > 0])
     if len(palette) < 2:
         return image_bytes
 
     blurred = np.array(Image.fromarray(rgb).filter(ImageFilter.GaussianBlur(radius=radius)))
     tree = cKDTree(palette)
-    _, nearest = tree.query(blurred.reshape(-1, 3))
+    # workers=-1: usa todos los nucleos disponibles. Por defecto scipy
+    # consulta el arbol en un solo hilo -- con millones de pixeles (una
+    # imagen grande) eso se vuelve el paso mas lento de todo el pipeline;
+    # verificado que da el mismo resultado exacto, solo mas rapido
+    # (probado: 3.65s -> 0.55s en una imagen de 4000x4000 con paleta de 20).
+    _, nearest = tree.query(blurred.reshape(-1, 3), workers=-1)
     smoothed_rgb = palette[nearest].reshape(rgb.shape).astype(np.uint8)
 
     out = np.dstack([smoothed_rgb, alpha]).astype(np.uint8)

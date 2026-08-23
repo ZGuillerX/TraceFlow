@@ -112,7 +112,8 @@ def run_vectorize(
             source_bytes = quantize_colors(source_bytes, num_colors, original_bg)
         # sin transparencia de por medio (todo opaco, con fondo), es
         # seguro suavizar el borde en escalera entre regiones de color
-        source_bytes = smooth_flat_edges(source_bytes)
+        with log_duration("suavizar bordes"):
+            source_bytes = smooth_flat_edges(source_bytes)
         params = {
             **params,
             # ver comentario equivalente en la rama remove_bg: con muchos
