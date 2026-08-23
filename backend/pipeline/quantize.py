@@ -1,7 +1,8 @@
 import io
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
+from scipy.spatial import cKDTree
 
 
 def quantize_colors(image_bytes: bytes, num_colors: int, bg_color, bg_tolerance: int = 60) -> bytes:
@@ -55,6 +56,41 @@ def quantize_colors(image_bytes: bytes, num_colors: int, bg_color, bg_tolerance:
         out_rgb[remaining] = np.array(full_quantized)[remaining]
 
     out = np.dstack([out_rgb.astype(np.uint8), alpha]).astype(np.uint8)
+    buf = io.BytesIO()
+    Image.fromarray(out, "RGBA").save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def smooth_flat_edges(image_bytes: bytes, radius: float = 2) -> bytes:
+    """Suaviza el borde en "escalera" de pixeles entre regiones de color
+    ya planas, sin agregar tonos nuevos: cada pixel del resultado sigue
+    siendo uno de los colores que ya estaban en la imagen.
+
+    vtracer sigue el borde real pixel a pixel, y con una escalera dura
+    necesita muchos segmentos de curva cortos para trazarla, lo que se
+    ve como zigzag/mordido en vez de una curva continua. Difuminar y
+    luego volver cada pixel al color plano mas cercano corrige la
+    posicion del borde a nivel subpixel sin tocar la paleta.
+
+    Solo para usar en imagenes sin transparencia real (con fondo
+    solido): si hay huecos (alfa parcial) esto puede correr el borde
+    de la zona opaca, por eso se separa de quantize_colors.
+    """
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+    arr = np.array(img)
+    rgb = arr[:, :, :3]
+    alpha = arr[:, :, 3]
+
+    palette = np.unique(rgb[alpha > 0].reshape(-1, 3), axis=0)
+    if len(palette) < 2:
+        return image_bytes
+
+    blurred = np.array(Image.fromarray(rgb).filter(ImageFilter.GaussianBlur(radius=radius)))
+    tree = cKDTree(palette)
+    _, nearest = tree.query(blurred.reshape(-1, 3))
+    smoothed_rgb = palette[nearest].reshape(rgb.shape).astype(np.uint8)
+
+    out = np.dstack([smoothed_rgb, alpha]).astype(np.uint8)
     buf = io.BytesIO()
     Image.fromarray(out, "RGBA").save(buf, format="PNG")
     return buf.getvalue()

@@ -28,7 +28,9 @@ def _run_model(rgb: Image.Image) -> Image.Image:
     return Image.fromarray((out * 255).round().astype(np.uint8), "RGB")
 
 
-def upscale_if_small(image_bytes: bytes, min_size: int = 200) -> tuple[bytes, int]:
+def upscale_if_small(
+    image_bytes: bytes, bg_color: tuple[int, int, int] | None = None, min_size: int = 200
+) -> tuple[bytes, int]:
     """Si la imagen es chica, la agranda con un modelo de super-resolucion
     (no una simple interpolacion) antes de vectorizar.
 
@@ -38,8 +40,21 @@ def upscale_if_small(image_bytes: bytes, min_size: int = 200) -> tuple[bytes, in
     resolucion. Es lo unico que puede darle a vtracer suficiente
     informacion para trazar curvas suaves en detalles de pocos pixeles
     (un simple upscale sin IA no aporta datos nuevos, ya se probo).
+
+    Si se pasa bg_color (detectado sobre la imagen original antes de
+    agrandar): el modelo reconstruye peor los bordes de la imagen y a
+    veces inventa manchas de color falsas justo ahi. Donde el original
+    ya decia claramente "esto es fondo" se restaura ese color exacto
+    despues de agrandar, sin confiar en lo que el modelo haya
+    reconstruido ahi. Si no se pasa (None), no se toca nada — se
+    mantiene el comportamiento original.
     """
     img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+
+    bg_mask = None
+    if bg_color is not None:
+        original_rgb = np.array(img)[:, :, :3].astype(int)
+        bg_mask = np.abs(original_rgb - np.array(bg_color)).sum(axis=2) <= 90
 
     passes = 0
     while max(img.size) < min_size and passes < MAX_PASSES:
@@ -49,6 +64,13 @@ def upscale_if_small(image_bytes: bytes, min_size: int = 200) -> tuple[bytes, in
         upscaled_alpha = a.resize(upscaled_rgb.size, Image.LANCZOS)
         img = Image.merge("RGBA", (*upscaled_rgb.split(), upscaled_alpha))
         passes += 1
+
+    if bg_mask is not None and passes > 0:
+        mask_img = Image.fromarray((bg_mask * 255).astype(np.uint8)).resize(img.size, Image.NEAREST)
+        scaled_mask = np.array(mask_img) > 127
+        arr = np.array(img)
+        arr[scaled_mask, :3] = bg_color
+        img = Image.fromarray(arr, "RGBA")
 
     buf = io.BytesIO()
     img.save(buf, format="PNG")

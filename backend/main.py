@@ -1,4 +1,5 @@
 import asyncio
+import io
 import re
 import tempfile
 from pathlib import Path
@@ -7,9 +8,10 @@ from fastapi import FastAPI, File, HTTPException, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
+from PIL import Image
 
 from pipeline.flat_background import remove_flat_background
-from pipeline.quantize import quantize_colors
+from pipeline.quantize import quantize_colors, smooth_flat_edges
 from pipeline.remove_background import remove_background
 from pipeline.upscale import upscale_if_small
 from pipeline.validation import validate_image
@@ -63,6 +65,27 @@ def run_vectorize(source_bytes: bytes, suffix: str, remove_bg: bool, colors: int
             **params,
             "color_precision": 3,
             "filter_speckle": max(1, params["filter_speckle"]) * scale,
+        }
+        suffix = ".png"
+    else:
+        # mismo tratamiento que arriba (mas resolucion + colores planos)
+        # pero conservando el fondo en vez de quitarlo. bg_color se
+        # detecta ANTES de agrandar (mas confiable ahi) y se le pasa al
+        # upscaler para que restaure el fondo real si el modelo inventa
+        # manchas de color en el borde.
+        original_bg = tuple(int(c) for c in Image.open(io.BytesIO(source_bytes)).convert("RGBA").getpixel((0, 0))[:3])
+        source_bytes, scale = upscale_if_small(source_bytes, original_bg)
+        num_colors = max(2, min(8, round(colors * 0.4)))
+        source_bytes = quantize_colors(source_bytes, num_colors, original_bg)
+        # sin transparencia de por medio (todo opaco, con fondo), es
+        # seguro suavizar el borde en escalera entre regiones de color
+        source_bytes = smooth_flat_edges(source_bytes)
+        params = {
+            **params,
+            "color_precision": 3,
+            "filter_speckle": max(1, params["filter_speckle"]) * scale,
+            "length_threshold": 8.0,
+            "splice_threshold": 90,
         }
         suffix = ".png"
 
