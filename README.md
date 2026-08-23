@@ -1,12 +1,11 @@
 # TraceFlow
 
-De píxeles sueltos a curvas que puedes usar. Vectorización de imágenes (PNG/JPG/WEBP → SVG) con control real sobre el trazado, y (próximamente) eliminación de fondo antes de vectorizar.
+De píxeles sueltos a curvas que puedes usar. Vectorización de imágenes (PNG/JPG/WEBP → SVG) con control real sobre el trazado, y eliminación de fondo antes de vectorizar.
 
 ## Stack
 
 - **Frontend:** React + Vite + TypeScript + Tailwind CSS (shadcn/ui, wouter)
-- **Backend:** Python (FastAPI) + [vtracer](https://github.com/visioncortex/vtracer) para la vectorización
-- **Fase 2 (pendiente):** quitar fondo con `rembg` + `BiRefNet`, aprovechando GPU local
+- **Backend:** Python (FastAPI) + [vtracer](https://github.com/visioncortex/vtracer) para la vectorización, `rembg`/`BiRefNet` para quitar fondo de fotos, y un modelo de super-resolución (EDSR) que agranda imágenes chicas antes de vectorizar
 
 ## Desarrollo
 

@@ -9,7 +9,9 @@ from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 from pipeline.flat_background import remove_flat_background
+from pipeline.quantize import quantize_colors
 from pipeline.remove_background import remove_background
+from pipeline.upscale import upscale_if_small
 from pipeline.validation import validate_image
 from pipeline.vectorize import detail_to_params, vectorize
 
@@ -36,12 +38,32 @@ def ensure_viewbox(svg: str) -> str:
     return re.sub(r"<svg\b", f'<svg viewBox="0 0 {w} {h}"', svg, count=1)
 
 
-def run_vectorize(source_bytes: bytes, suffix: str, remove_bg: bool, params: dict) -> str:
+def run_vectorize(source_bytes: bytes, suffix: str, remove_bg: bool, colors: int, params: dict) -> str:
     """Trabajo sincrono (bloqueante) que corre en un hilo aparte via
     asyncio.to_thread, para no congelar el event loop de FastAPI mientras
     vtracer/rembg procesan la imagen."""
     if remove_bg:
-        source_bytes = remove_flat_background(source_bytes)
+        # imagenes chicas (iconos/capturas de pocos px) no traen suficiente
+        # informacion para que vtracer dibuje curvas suaves en detalles
+        # pequenos; un simple resize no ayuda (ya se probo), hace falta un
+        # modelo de super-resolucion que reconstruya detalle plausible.
+        source_bytes, scale = upscale_if_small(source_bytes)
+
+        source_bytes, bg_color = remove_flat_background(source_bytes)
+        # el degradado/antialiasing del dibujo deja cientos de tonos casi
+        # iguales; sin esto vtracer traza cada uno como su propia mancha.
+        # Aqui se reduce a un puñado de colores planos antes de vectorizar.
+        num_colors = max(2, min(8, round(colors * 0.4)))
+        source_bytes = quantize_colors(source_bytes, num_colors, bg_color)
+        # con la imagen ya reducida a colores planos, un color_precision
+        # alto hace que vtracer re-fragmente el degradado en vez de
+        # respetar los colores ya limpios (mas notorio mientras mas grande
+        # la imagen, de ahi que quede fijo y bajo en vez de al maximo)
+        params = {
+            **params,
+            "color_precision": 3,
+            "filter_speckle": max(1, params["filter_speckle"]) * scale,
+        }
         suffix = ".png"
 
     with tempfile.TemporaryDirectory(prefix="traceflow_") as tmp:
@@ -87,7 +109,7 @@ async def api_vectorize(
     suffix = Path(file.filename or "input.png").suffix or ".png"
 
     svg_content = await with_timeout(
-        asyncio.to_thread(run_vectorize, source_bytes, suffix, remove_bg, params)
+        asyncio.to_thread(run_vectorize, source_bytes, suffix, remove_bg, colors, params)
     )
     return Response(content=svg_content, media_type="image/svg+xml")
 

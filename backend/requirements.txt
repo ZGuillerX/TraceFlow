@@ -7,3 +7,5 @@ onnxruntime
 numpy
 scipy
 pillow
+torch
+super-image
