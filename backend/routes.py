@@ -33,6 +33,20 @@ async def with_timeout(coro):
         raise HTTPException(504, "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple.") from e
 
 
+_STREAM_DONE = object()
+
+
+def _advance(it: Iterator[VectorizeStage]):
+    # next(it) directo lanzaria StopIteration al agotarse, pero eso
+    # cruzaria la frontera del hilo via asyncio.to_thread -- asyncio
+    # prohibe propagar StopIteration a un Future (PEP 479) y la
+    # convierte en un TypeError que rompe el generador async sin cerrar
+    # el stream HTTP correctamente (el cliente ve "response ended
+    # prematurely" en vez de un cierre limpio). Un sentinel evita que
+    # StopIteration llegue a cruzar esa frontera.
+    return next(it, _STREAM_DONE)
+
+
 async def _stream_stages(sync_gen: Iterator[VectorizeStage], timeout_seconds: float) -> AsyncIterator[VectorizeStage]:
     """Puentea el generador sincrono (bloqueante) de run_vectorize_stages
     a un generador async: cada paso corre en un hilo aparte via
@@ -51,11 +65,11 @@ async def _stream_stages(sync_gen: Iterator[VectorizeStage], timeout_seconds: fl
             yield {"stage": "error", "message": "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple."}
             return
         try:
-            item = await asyncio.wait_for(asyncio.to_thread(next, it), timeout=remaining)
-        except StopIteration:
-            return
+            item = await asyncio.wait_for(asyncio.to_thread(_advance, it), timeout=remaining)
         except asyncio.TimeoutError:
             yield {"stage": "error", "message": "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple."}
+            return
+        if item is _STREAM_DONE:
             return
         yield item
 
