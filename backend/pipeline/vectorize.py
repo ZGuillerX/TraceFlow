@@ -46,7 +46,10 @@ def detail_to_params(detail_pct: float, color_groups: int) -> dict:
     detail = max(10, min(100, detail_pct)) / 100.0
     return {
         "color_precision": max(1, min(8, round(color_groups / 2))),
-        "filter_speckle": round((1 - detail) * 16),
+        # tope bajo a proposito: en iconos pequenos, detalles internos
+        # (huecos, acentos) pueden ser de solo unos pocos pixeles, y un
+        # filter_speckle alto los descarta como si fueran ruido
+        "filter_speckle": round((1 - detail) * 6),
         "path_precision": max(1, min(10, round(2 + detail * 8))),
         "corner_threshold": round(80 - detail * 40),
         "length_threshold": round(4 + (1 - detail) * 4, 1),
