@@ -1,5 +1,4 @@
 import asyncio
-import base64
 import json
 import time
 from pathlib import Path
@@ -75,13 +74,17 @@ async def _stream_stages(sync_gen: Iterator[VectorizeStage], timeout_seconds: fl
 
 
 def _format_sse(stage: VectorizeStage) -> str:
+    # las etapas intermedias solo yieldan la imagen para que el pipeline
+    # siga procesando sobre esos bytes (ver run_vectorize_stages) -- el
+    # cliente solo necesita saber el NOMBRE de la etapa para su barra de
+    # progreso, no la imagen en si, asi que no vale la pena pagar el
+    # costo de codificarla a base64 y mandar decenas de KB por evento.
     if "svg" in stage:
         payload = {"stage": stage["stage"], "svg": stage["svg"], "bgHex": stage.get("bg_hex")}
-    elif "image" in stage:
-        b64 = base64.b64encode(stage["image"]).decode("ascii")
-        payload = {"stage": stage["stage"], "image": f"data:image/png;base64,{b64}"}
+    elif "message" in stage:
+        payload = {"stage": stage["stage"], "message": stage["message"]}
     else:
-        payload = dict(stage)
+        payload = {"stage": stage["stage"]}
     return f"data: {json.dumps(payload)}\n\n"
 
 

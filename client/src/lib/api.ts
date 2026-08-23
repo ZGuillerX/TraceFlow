@@ -40,16 +40,15 @@ export async function vectorizeImage(
 
 export interface VectorizeStageEvent {
   stage: string;
-  image?: string;
   svg?: string;
   bgHex?: string | null;
   message?: string;
 }
 
 /** Igual que vectorizeImage, pero via /api/vectorize/stream: llama a
- * onStage con cada etapa del pipeline segun va llegando (para el
- * preview en vivo del proceso), y devuelve el mismo resultado final
- * al terminar. No se puede usar EventSource (no soporta POST con
+ * onStage con el nombre de cada etapa del pipeline segun se completa
+ * (para la barra de progreso en vivo), y devuelve el mismo resultado
+ * final al terminar. No se puede usar EventSource (no soporta POST con
  * body) -- se lee el stream a mano con getReader() y se parsean los
  * bloques "data: ...\n\n" (formato SSE) segun llegan. */
 export async function vectorizeImageStream(

@@ -4,7 +4,7 @@ import TraceFlowShell from "@/components/TraceFlowShell";
 import PreviewCanvas from "@/components/workspace/PreviewCanvas";
 import SettingsPanel from "@/components/workspace/SettingsPanel";
 import { toast } from "sonner";
-import { vectorizeImageStream, type VectorizeStageEvent } from "@/lib/api";
+import { vectorizeImageStream } from "@/lib/api";
 import { detectColors, recolorSvg } from "@/lib/recolor";
 
 export default function Workspace() {
@@ -21,7 +21,7 @@ export default function Workspace() {
   );
   const [mode, setMode] = useState<"preview" | "paths">("preview");
   const [processing, setProcessing] = useState(false);
-  const [stages, setStages] = useState<VectorizeStageEvent[]>([]);
+  const [currentStage, setCurrentStage] = useState<string | null>(null);
   const choose = () => input.current?.click();
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -45,12 +45,12 @@ export default function Workspace() {
   const process = async () => {
     if (!file) return toast.info("Carga una imagen primero.");
     setProcessing(true);
-    setStages([]);
+    setCurrentStage(null);
     try {
       const { svg, bgHex } = await vectorizeImageStream(
         file,
         { detail, colors, autoColors, removeBg },
-        stage => setStages(prev => [...prev, stage])
+        stage => setCurrentStage(stage.stage)
       );
       setSvg(svg);
       setBgHex(bgHex);
@@ -111,7 +111,7 @@ export default function Workspace() {
             choose={choose}
             onFile={onFile}
             processing={processing}
-            stages={stages}
+            currentStage={currentStage}
           />
           <SettingsPanel
             detail={detail}
