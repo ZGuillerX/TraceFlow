@@ -8,7 +8,6 @@ import {
   Menu,
   Moon,
   Settings2,
-  Sparkles,
   WandSparkles,
 } from "lucide-react";
 import { useState } from "react";
@@ -78,23 +77,6 @@ export default function TraceFlowShell({
           );
         })}
       </nav>
-      <div className="mt-auto rounded-2xl border border-[#dfe2ea] bg-white p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <span className="eyebrow">Prueba Pro</span>
-          <Sparkles size={15} className="text-[#7C3AED]" />
-        </div>
-        <p className="mb-3 text-xs leading-relaxed text-[#69728a]">
-          Procesa tus primeras imágenes con resultados de alta fidelidad.
-        </p>
-        <button
-          onClick={() =>
-            toast.info("Los planes estarán disponibles próximamente.")
-          }
-          className="flex items-center gap-1 text-xs font-bold text-[#101A46]"
-        >
-          Ver planes <ArrowUpRight size={13} />
-        </button>
-      </div>
     </aside>
   );
 
@@ -182,14 +164,6 @@ export default function TraceFlowShell({
           </Link>
         </nav>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() =>
-              toast.info("Iniciar sesión estará disponible próximamente.")
-            }
-            className="hidden text-sm font-bold text-[#101A46] sm:block"
-          >
-            Iniciar sesión
-          </button>
           <Link
             href="/workspace"
             className="button-press inline-flex items-center gap-2 rounded-xl bg-[#101A46] px-4 py-2.5 text-sm font-bold text-white shadow-[0_8px_18px_rgba(16,26,70,.14)] hover:bg-[#18265e]"
