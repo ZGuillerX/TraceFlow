@@ -23,3 +23,14 @@ MAX_UPLOAD_SIZE_BYTES = 15 * 1024 * 1024
 # disparar el costo de CPU/tiempo del servidor.
 RATE_LIMIT_MAX_REQUESTS = 10
 RATE_LIMIT_WINDOW_SECONDS = 60
+
+# Limite de rafaga corta para /api/vectorize y /api/vectorize/stream,
+# ademas del limite de arriba: cancelar y volver a generar rapido (el
+# boton "Cancelar" del frontend) no interrumpe de verdad el trabajo
+# pesado ya lanzado (una vez arrancado, un hilo bloqueante no se puede
+# matar desde afuera), asi que varias peticiones seguidas en pocos
+# segundos siguen compitiendo por CPU aunque cada una individualmente
+# este "cancelada". Esto limita cuantas puede lanzar el MISMO cliente
+# en una ventana corta, sin importar si las anteriores siguen vivas.
+VECTORIZE_BURST_MAX_REQUESTS = 3
+VECTORIZE_BURST_WINDOW_SECONDS = 10

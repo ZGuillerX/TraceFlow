@@ -11,6 +11,8 @@ from config import (
     PROCESSING_TIMEOUT_SECONDS,
     RATE_LIMIT_MAX_REQUESTS,
     RATE_LIMIT_WINDOW_SECONDS,
+    VECTORIZE_BURST_MAX_REQUESTS,
+    VECTORIZE_BURST_WINDOW_SECONDS,
 )
 from pipeline.remove_background import remove_background
 from pipeline.validation import validate_image
@@ -21,6 +23,10 @@ from vectorize_service import VectorizeStage, run_vectorize, run_vectorize_stage
 
 vectorize_limiter = RateLimiter(RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_SECONDS)
 remove_bg_limiter = RateLimiter(RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_SECONDS)
+# limite de rafaga corta, ademas del de arriba -- ver comentario junto
+# a VECTORIZE_BURST_MAX_REQUESTS en config.py. Compartido entre
+# /api/vectorize y /api/vectorize/stream: mismo pipeline pesado.
+vectorize_burst_limiter = RateLimiter(VECTORIZE_BURST_MAX_REQUESTS, VECTORIZE_BURST_WINDOW_SECONDS)
 
 router = APIRouter()
 
@@ -107,7 +113,9 @@ async def api_vectorize(
     remove_bg: bool = Form(False),
     auto_colors: bool = Form(True),
 ):
-    vectorize_limiter.check(client_key(request))
+    key = client_key(request)
+    vectorize_burst_limiter.check(key)
+    vectorize_limiter.check(key)
     source_bytes = await file.read()
     error = validate_image(file.content_type, source_bytes)
     if error:
@@ -138,7 +146,9 @@ async def api_vectorize_stream(
     (original, ampliada, sin fondo/colores, resultado final) segun se
     va completando, en vez de una sola respuesta al terminar todo --
     para el preview en vivo del proceso en el frontend."""
-    vectorize_limiter.check(client_key(request))
+    key = client_key(request)
+    vectorize_burst_limiter.check(key)
+    vectorize_limiter.check(key)
     source_bytes = await file.read()
     error = validate_image(file.content_type, source_bytes)
     if error:
