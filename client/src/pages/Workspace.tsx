@@ -5,8 +5,13 @@ import PreviewCanvas from "@/components/workspace/PreviewCanvas";
 import SettingsPanel from "@/components/workspace/SettingsPanel";
 import { toast } from "sonner";
 import { vectorizeImageStream } from "@/lib/api";
+import { TooManyRequestsError } from "@/lib/errors";
 import { detectColors, recolorSvg } from "@/lib/recolor";
-import { getActiveCooldown, registerCancel } from "@/lib/generateCooldown";
+import {
+  applyServerCooldown,
+  getActiveCooldown,
+  registerCancel,
+} from "@/lib/generateCooldown";
 
 export default function Workspace() {
   const input = useRef<HTMLInputElement>(null);
@@ -86,6 +91,18 @@ export default function Workspace() {
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         toast.info("Vectorización cancelada.");
+      } else if (err instanceof TooManyRequestsError && err.limitType === "concurrency") {
+        // el trabajo de un intento anterior (cancelado) sigue
+        // terminando en el backend -- mostrar el mensaje crudo del
+        // servidor aca confundiria justo despues de cancelar, asi que
+        // se trata igual que otra cancelacion: mismo cooldown local.
+        setCooldown(registerCancel());
+        toast.info("La vectorización anterior sigue terminando, espera un momento.");
+      } else if (err instanceof TooManyRequestsError && err.limitType === "rate") {
+        setCooldown(
+          applyServerCooldown(err.retryAfterSeconds ?? 30, err.message)
+        );
+        toast.error(err.message);
       } else {
         toast.error(
           err instanceof Error

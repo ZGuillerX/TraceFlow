@@ -63,3 +63,14 @@ export function registerCancel(): Cooldown {
   localStorage.setItem(COOLDOWN_KEY, JSON.stringify(cooldown));
   return cooldown;
 }
+
+/** El backend rechazo la peticion con un 429 real (limite de tasa,
+ * distinto del limite de concurrencia -- ver TooManyRequestsError):
+ * su mensaje y tiempo de espera ya son exactos, asi que el cooldown
+ * local se sincroniza con esos mismos valores en vez de usar los
+ * genericos de registerCancel(). */
+export function applyServerCooldown(seconds: number, message: string): Cooldown {
+  const cooldown: Cooldown = { until: Date.now() + seconds * 1000, message };
+  localStorage.setItem(COOLDOWN_KEY, JSON.stringify(cooldown));
+  return cooldown;
+}

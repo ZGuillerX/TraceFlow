@@ -35,7 +35,7 @@ class RateLimiter:
                 raise HTTPException(
                     429,
                     f"Demasiadas peticiones. Espera {retry_after}s antes de intentar de nuevo.",
-                    headers={"Retry-After": str(retry_after)},
+                    headers={"Retry-After": str(retry_after), "X-Limit-Type": "rate"},
                 )
             hits.append(now)
         # limpieza oportunista: en un proceso de larga duracion, sin esto
@@ -77,6 +77,7 @@ class ConcurrencyLimiter:
                 raise HTTPException(
                     429,
                     "Ya tienes una vectorizacion en curso. Espera a que termine o cancelala antes de generar otra.",
+                    headers={"X-Limit-Type": "concurrency"},
                 )
             self._active[key] += 1
 
