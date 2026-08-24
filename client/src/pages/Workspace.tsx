@@ -1,11 +1,12 @@
 /* TraceFlow / Vector Atelier: workspace de vectorización con superficies de precisión, grid y anotaciones de trazado. */
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import TraceFlowShell from "@/components/TraceFlowShell";
 import PreviewCanvas from "@/components/workspace/PreviewCanvas";
 import SettingsPanel from "@/components/workspace/SettingsPanel";
 import { toast } from "sonner";
 import { vectorizeImageStream } from "@/lib/api";
 import { detectColors, recolorSvg } from "@/lib/recolor";
+import { getActiveCooldown, registerCancel } from "@/lib/generateCooldown";
 
 export default function Workspace() {
   const input = useRef<HTMLInputElement>(null);
@@ -22,8 +23,29 @@ export default function Workspace() {
   const [mode, setMode] = useState<"preview" | "paths">("preview");
   const [processing, setProcessing] = useState(false);
   const [currentStage, setCurrentStage] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(() => getActiveCooldown());
+  const [cooldownSecondsLeft, setCooldownSecondsLeft] = useState(0);
   const abortController = useRef<AbortController | null>(null);
   const choose = () => input.current?.click();
+
+  // cuenta regresiva visual del cooldown (post-cancelar), y lo limpia
+  // solo al expirar -- persistido en localStorage (getActiveCooldown),
+  // asi que sobrevive un refresh de la pagina.
+  useEffect(() => {
+    if (!cooldown) return;
+    const tick = () => {
+      const secondsLeft = Math.ceil((cooldown.until - Date.now()) / 1000);
+      if (secondsLeft <= 0) {
+        setCooldown(null);
+        setCooldownSecondsLeft(0);
+      } else {
+        setCooldownSecondsLeft(secondsLeft);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (f) {
@@ -45,6 +67,7 @@ export default function Workspace() {
     setColorOverrides(prev => ({ ...prev, [id]: hex }));
   const process = async () => {
     if (!file) return toast.info("Carga una imagen primero.");
+    if (cooldown && cooldown.until > Date.now()) return;
     const controller = new AbortController();
     abortController.current = controller;
     setProcessing(true);
@@ -75,7 +98,12 @@ export default function Workspace() {
       abortController.current = null;
     }
   };
-  const cancel = () => abortController.current?.abort();
+  const cancel = () => {
+    abortController.current?.abort();
+    const next = registerCancel();
+    setCooldown(next);
+    if (next.message) toast.error(next.message);
+  };
   const download = () => {
     if (!displaySvg) return toast.info("Genera una preview para exportar.");
     const url = URL.createObjectURL(
@@ -139,6 +167,7 @@ export default function Workspace() {
             processing={processing}
             process={process}
             download={download}
+            cooldownSecondsLeft={cooldown ? cooldownSecondsLeft : 0}
           />
         </div>
       </div>

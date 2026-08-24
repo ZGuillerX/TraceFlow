@@ -29,6 +29,7 @@ interface SettingsPanelProps {
   processing: boolean;
   process: () => void;
   download: () => void;
+  cooldownSecondsLeft: number;
 }
 
 /** Panel de controles de trazado del workspace de vectorización: nivel
@@ -50,6 +51,7 @@ export default function SettingsPanel({
   processing,
   process,
   download,
+  cooldownSecondsLeft,
 }: SettingsPanelProps) {
   return (
     <aside className="border border-[#cfd5e1] bg-[#f6f6f2] p-5">
@@ -181,14 +183,19 @@ export default function SettingsPanel({
       )}
       <button
         onClick={process}
-        className="button-press mt-8 flex w-full items-center justify-center gap-2 bg-[#1687F8] px-4 py-3.5 text-sm font-bold text-white hover:bg-[#0e74dd]"
+        disabled={processing || cooldownSecondsLeft > 0}
+        className="button-press mt-8 flex w-full items-center justify-center gap-2 bg-[#1687F8] px-4 py-3.5 text-sm font-bold text-white hover:bg-[#0e74dd] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {processing ? (
           <RefreshCw size={16} className="animate-spin" />
         ) : (
           <WandSparkles size={16} />
         )}{" "}
-        {processing ? "Trazando…" : "Generar preview"}
+        {processing
+          ? "Trazando…"
+          : cooldownSecondsLeft > 0
+            ? `Espera ${cooldownSecondsLeft}s…`
+            : "Generar preview"}
       </button>
       <button
         onClick={download}
