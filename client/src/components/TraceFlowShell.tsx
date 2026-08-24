@@ -42,7 +42,8 @@ const nav = [
   { href: "/", label: "Inicio", icon: Home },
   { href: "/workspace", label: "Vectorizar", icon: WandSparkles },
   { href: "/background-remover", label: "Quitar fondo", icon: Eraser },
-  { href: "/history", label: "Historial", icon: Clock3 },
+  // Historial: pendiente de conectar a un backend real, oculto por ahora.
+  // { href: "/history", label: "Historial", icon: Clock3 },
 ];
 
 export default function TraceFlowShell({
@@ -156,12 +157,14 @@ export default function TraceFlowShell({
           >
             Capacidades
           </a>
+          {/* Historial: pendiente de conectar a un backend real, oculto por ahora.
           <Link
             href="/history"
             className="transition-colors hover:text-[#101A46]"
           >
             Historial
           </Link>
+          */}
         </nav>
         <div className="flex items-center gap-3">
           <Link
