@@ -13,28 +13,6 @@ import {
   registerCancel,
 } from "@/lib/generateCooldown";
 
-const CONCURRENCY_RETRY_DELAY_MS = 1500;
-const CONCURRENCY_RETRY_DEADLINE_MS = 20000;
-
-/** Espera ms milisegundos, pero se corta de inmediato si el usuario
- * cancela durante la espera -- sin esto, el reintento automatico (ver
- * process()) ignoraria un click en "Cancelar" hasta el proximo
- * intento. */
-function abortableDelay(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) return reject(new DOMException("Aborted", "AbortError"));
-    const timer = setTimeout(resolve, ms);
-    signal.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        reject(new DOMException("Aborted", "AbortError"));
-      },
-      { once: true }
-    );
-  });
-}
-
 export default function Workspace() {
   const input = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -99,49 +77,33 @@ export default function Workspace() {
     abortController.current = controller;
     setProcessing(true);
     setCurrentStage(null);
-    const retryDeadline = Date.now() + CONCURRENCY_RETRY_DEADLINE_MS;
     try {
-      let result = null;
-      while (!result) {
-        try {
-          result = await vectorizeImageStream(
-            file,
-            { detail, colors, autoColors, removeBg },
-            stage => setCurrentStage(stage.stage),
-            controller.signal
-          );
-        } catch (err) {
-          // el trabajo de un intento anterior (p. ej. recien
-          // cancelado) puede seguir terminando en el backend un ratito
-          // mas -- en vez de mostrarle esto al usuario como un error,
-          // se reintenta solo en segundo plano hasta lograr el turno
-          // o hasta el tope de tiempo, sin que note nada mas alla de
-          // seguir viendo "Trazando…".
-          if (
-            err instanceof TooManyRequestsError &&
-            err.limitType === "concurrency" &&
-            Date.now() < retryDeadline
-          ) {
-            await abortableDelay(CONCURRENCY_RETRY_DELAY_MS, controller.signal);
-            continue;
-          }
-          throw err;
-        }
-      }
-      setSvg(result.svg);
-      setBgHex(result.bgHex);
+      const { svg, bgHex } = await vectorizeImageStream(
+        file,
+        { detail, colors, autoColors, removeBg },
+        stage => setCurrentStage(stage.stage),
+        controller.signal
+      );
+      setSvg(svg);
+      setBgHex(bgHex);
       setColorOverrides({});
       toast.success("Preview vectorial actualizada.");
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         toast.info("Vectorización cancelada.");
+      } else if (err instanceof TooManyRequestsError && err.limitType === "concurrency") {
+        // el trabajo de un intento anterior (cancelado) sigue
+        // terminando en el backend -- se trata exactamente igual que
+        // otra cancelacion (mismo cooldown local corto/largo segun la
+        // racha), sin ningun toast: el botón mostrando "Espera Xs…" de
+        // nuevo ya es suficiente, un mensaje aparte aca confundiria
+        // mas de lo que aclara.
+        setCooldown(registerCancel());
       } else if (err instanceof TooManyRequestsError && err.limitType === "rate") {
         setCooldown(
           applyServerCooldown(err.retryAfterSeconds ?? 30, err.message)
         );
         toast.error(err.message);
-      } else if (err instanceof TooManyRequestsError) {
-        toast.error("El servidor sigue muy ocupado. Intenta de nuevo en un momento.");
       } else {
         toast.error(
           err instanceof Error
