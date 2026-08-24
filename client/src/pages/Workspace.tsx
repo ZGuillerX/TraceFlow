@@ -93,11 +93,12 @@ export default function Workspace() {
         toast.info("Vectorización cancelada.");
       } else if (err instanceof TooManyRequestsError && err.limitType === "concurrency") {
         // el trabajo de un intento anterior (cancelado) sigue
-        // terminando en el backend -- mostrar el mensaje crudo del
-        // servidor aca confundiria justo despues de cancelar, asi que
-        // se trata igual que otra cancelacion: mismo cooldown local.
+        // terminando en el backend -- se trata exactamente igual que
+        // otra cancelacion (mismo cooldown local corto/largo segun la
+        // racha), sin ningun toast: el botón mostrando "Espera Xs…" de
+        // nuevo ya es suficiente, un mensaje aparte aca confundiria
+        // mas de lo que aclara.
         setCooldown(registerCancel());
-        toast.info("La vectorización anterior sigue terminando, espera un momento.");
       } else if (err instanceof TooManyRequestsError && err.limitType === "rate") {
         setCooldown(
           applyServerCooldown(err.retryAfterSeconds ?? 30, err.message)
