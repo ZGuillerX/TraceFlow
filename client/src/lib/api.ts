@@ -1,4 +1,4 @@
-import { throwForFailedResponse } from "./errors";
+import { extractErrorMessage } from "./errors";
 
 export interface VectorizeOptions {
   detail: number;
@@ -28,9 +28,11 @@ export async function vectorizeImage(
 
   const res = await fetch("/api/vectorize", { method: "POST", body });
   if (!res.ok) {
-    await throwForFailedResponse(
-      res,
-      "No se pudo vectorizar la imagen. Intenta de nuevo."
+    throw new Error(
+      await extractErrorMessage(
+        res,
+        "No se pudo vectorizar la imagen. Intenta de nuevo."
+      )
     );
   }
   return { svg: await res.text(), bgHex: res.headers.get("X-Bg-Color") };
@@ -64,9 +66,11 @@ export async function vectorizeImageStream(
 
   const res = await fetch("/api/vectorize/stream", { method: "POST", body, signal });
   if (!res.ok || !res.body) {
-    throw await throwForFailedResponse(
-      res,
-      "No se pudo vectorizar la imagen. Intenta de nuevo."
+    throw new Error(
+      await extractErrorMessage(
+        res,
+        "No se pudo vectorizar la imagen. Intenta de nuevo."
+      )
     );
   }
 
@@ -113,7 +117,9 @@ export async function removeBackgroundApi(file: File): Promise<Blob> {
     body,
   });
   if (!res.ok) {
-    await throwForFailedResponse(res, "No se pudo quitar el fondo. Intenta de nuevo.");
+    throw new Error(
+      await extractErrorMessage(res, "No se pudo quitar el fondo. Intenta de nuevo.")
+    );
   }
   return res.blob();
 }
