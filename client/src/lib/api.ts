@@ -106,11 +106,20 @@ export async function vectorizeImageStream(
   return result;
 }
 
+export type RemoveBgQuality = "fast" | "high";
+
 /** Manda la imagen a /api/remove-background y devuelve el PNG
- * transparente resultante. */
-export async function removeBackgroundApi(file: File): Promise<Blob> {
+ * transparente resultante. quality "fast" usa un modelo mas liviano
+ * (~30-40% mas rapido) que a veces deja huecos de transparencia en
+ * detalles oscuros de alto contraste -- "high" (default) es el modelo
+ * completo, mas lento pero sin ese problema. */
+export async function removeBackgroundApi(
+  file: File,
+  quality: RemoveBgQuality = "high"
+): Promise<Blob> {
   const body = new FormData();
   body.append("file", file);
+  body.append("quality", quality);
 
   const res = await fetch("/api/remove-background", {
     method: "POST",

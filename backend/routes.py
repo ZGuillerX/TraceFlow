@@ -14,7 +14,7 @@ from config import (
     VECTORIZE_BURST_MAX_REQUESTS,
     VECTORIZE_BURST_WINDOW_SECONDS,
 )
-from pipeline.remove_background import remove_background
+from pipeline.remove_background import Quality, remove_background
 from pipeline.validation import validate_image
 from pipeline.vectorize import detail_to_params
 from rate_limit import RateLimiter, client_key
@@ -166,14 +166,18 @@ async def api_vectorize_stream(
 
 
 @router.post("/api/remove-background")
-async def api_remove_background(request: Request, file: UploadFile = File(...)):
+async def api_remove_background(
+    request: Request,
+    file: UploadFile = File(...),
+    quality: Quality = Form("high"),
+):
     remove_bg_limiter.check(client_key(request))
     source_bytes = await file.read()
     error = validate_image(file.content_type, source_bytes)
     if error:
         raise HTTPException(400, error)
 
-    label = f"POST /api/remove-background ({len(source_bytes) // 1024}KB)"
+    label = f"POST /api/remove-background ({len(source_bytes) // 1024}KB, quality={quality})"
     with log_duration(label):
-        png_bytes = await with_timeout(asyncio.to_thread(remove_background, source_bytes))
+        png_bytes = await with_timeout(asyncio.to_thread(remove_background, source_bytes, quality))
     return Response(content=png_bytes, media_type="image/png")

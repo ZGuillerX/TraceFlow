@@ -13,7 +13,7 @@ import TraceFlowShell from "@/components/TraceFlowShell";
 import ZoomLightbox from "@/components/ZoomLightbox";
 import { toast } from "sonner";
 import sample from "@/assets/sample-transform.webp";
-import { removeBackgroundApi } from "@/lib/api";
+import { removeBackgroundApi, type RemoveBgQuality } from "@/lib/api";
 
 export default function BackgroundRemover() {
   const input = useRef<HTMLInputElement>(null);
@@ -23,6 +23,7 @@ export default function BackgroundRemover() {
   const [showOriginal, setShowOriginal] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [quality, setQuality] = useState<RemoveBgQuality>("high");
   const [zoomed, setZoomed] = useState(false);
   useEffect(() => {
     if (!processing) return;
@@ -67,7 +68,7 @@ export default function BackgroundRemover() {
     if (!file) return toast.info("Carga una imagen primero.");
     setProcessing(true);
     try {
-      const blob = await removeBackgroundApi(file);
+      const blob = await removeBackgroundApi(file, quality);
       setResultUrl(URL.createObjectURL(blob));
       setShowOriginal(false);
       toast.success("Fondo eliminado. Descarga lista.");
@@ -198,6 +199,30 @@ export default function BackgroundRemover() {
               </div>
               <p className="mt-2 text-[11px] leading-relaxed text-[#7a8299]">
                 PNG, JPG o WEBP hasta 15 MB.
+              </p>
+            </div>
+            <div className="mt-4">
+              <label className="text-xs font-bold text-[#101A46]">
+                Calidad
+              </label>
+              <div className="mt-2 flex border border-[#dfe2ea] bg-white p-1">
+                <button
+                  onClick={() => setQuality("fast")}
+                  className={`flex-1 px-3 py-1.5 text-xs font-bold ${quality === "fast" ? "bg-[#101A46] text-white" : "text-[#7a8299]"}`}
+                >
+                  Rápida
+                </button>
+                <button
+                  onClick={() => setQuality("high")}
+                  className={`flex-1 px-3 py-1.5 text-xs font-bold ${quality === "high" ? "bg-[#101A46] text-white" : "text-[#7a8299]"}`}
+                >
+                  Alta calidad
+                </button>
+              </div>
+              <p className="mt-2 text-[11px] leading-relaxed text-[#7a8299]">
+                {quality === "fast"
+                  ? "Más rápida, puede fallar en detalles oscuros de alto contraste (ojos, sombras marcadas)."
+                  : "Mejor resultado en detalles finos. Tarda algo más."}
               </p>
             </div>
             <button
