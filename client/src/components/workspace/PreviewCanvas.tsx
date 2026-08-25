@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { useState, type DragEvent, type RefObject } from "react";
 import { Info, MousePointer2, Upload } from "lucide-react";
 import empty from "@/assets/empty-state.svg";
 
@@ -11,6 +11,7 @@ interface PreviewCanvasProps {
   setMode: (mode: "preview" | "paths") => void;
   choose: () => void;
   onFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onDropFile: (file: File | undefined) => void;
   processing: boolean;
   currentStage: string | null;
   cancel: () => void;
@@ -52,11 +53,33 @@ export default function PreviewCanvas({
   setMode,
   choose,
   onFile,
+  onDropFile,
   processing,
   currentStage,
   cancel,
 }: PreviewCanvasProps) {
   const progress = currentStage ? (STAGE_PROGRESS[currentStage] ?? 0) : 0;
+  const [isDragging, setIsDragging] = useState(false);
+
+  // processing bloquea el drop: soltar una imagen nueva a medio
+  // trazado interrumpiria el proceso en curso de forma confusa (para
+  // reemplazar hay que cancelar primero).
+  const onDragOver = (e: DragEvent<HTMLDivElement>) => {
+    if (processing) return;
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  const onDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDragging(false);
+  };
+  const onDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (processing) return;
+    onDropFile(e.dataTransfer.files[0]);
+  };
+
   return (
     <section className="min-h-[560px] border border-[#cfd5e1] bg-white p-4 shadow-[0_18px_50px_rgba(16,26,70,.06)] sm:p-6">
       <div className="mb-5 flex items-center justify-between">
@@ -80,7 +103,10 @@ export default function PreviewCanvas({
         </div>
       </div>
       <div
-        className={`paper-grid relative flex min-h-[430px] items-center justify-center overflow-hidden border border-dashed border-[#cbd3df] ${file ? "bg-[#f8fbff]" : "bg-[#fafaf7]"}`}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        className={`paper-grid relative flex min-h-[430px] items-center justify-center overflow-hidden border border-dashed transition-colors ${isDragging ? "border-[#1687F8] bg-[#eaf3ff]" : file ? "border-[#cbd3df] bg-[#f8fbff]" : "border-[#cbd3df] bg-[#fafaf7]"}`}
       >
         {processing ? (
           <div className="flex h-[380px] w-full max-w-[480px] flex-col items-center justify-center gap-4 border border-[#cfd8e6] bg-white p-6 shadow-[0_15px_35px_rgba(16,26,70,.1)]">

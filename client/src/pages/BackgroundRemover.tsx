@@ -1,5 +1,5 @@
 /* TraceFlow / Vector Atelier: eliminación de fondos con checkerboard, anotaciones antes/después y acción azul eléctrica. */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import {
   ArrowDownToLine,
   Eraser,
@@ -31,8 +31,7 @@ export default function BackgroundRemover() {
     return () => clearInterval(id);
   }, [processing]);
   const choose = () => input.current?.click();
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
+  const loadFile = (f: File | undefined) => {
     if (f) {
       setFile(f);
       setOriginalUrl(URL.createObjectURL(f));
@@ -40,6 +39,24 @@ export default function BackgroundRemover() {
       setShowOriginal(false);
       toast.success("Imagen lista para quitar el fondo.");
     }
+  };
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) =>
+    loadFile(e.target.files?.[0]);
+  const [isDragging, setIsDragging] = useState(false);
+  const onDragOver = (e: DragEvent<HTMLDivElement>) => {
+    if (processing) return;
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  const onDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setIsDragging(false);
+  };
+  const onDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (processing) return;
+    loadFile(e.dataTransfer.files[0]);
   };
   const reset = () => {
     setFile(null);
@@ -107,7 +124,12 @@ export default function BackgroundRemover() {
                 {showOriginal ? "Ver resultado" : "Ver original"}
               </button>
             </div>
-            <div className="relative flex min-h-[490px] items-center justify-center overflow-hidden border border-[#dfe2ea] bg-[#f6f6f2] p-5">
+            <div
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+              className={`relative flex min-h-[490px] items-center justify-center overflow-hidden border p-5 transition-colors ${isDragging ? "border-[#1687F8] bg-[#eaf3ff]" : "border-[#dfe2ea] bg-[#f6f6f2]"}`}
+            >
               <div
                 className={`relative h-[330px] w-full max-w-[560px] overflow-hidden border border-[#d6dbe5] ${showOriginal ? "bg-[#e6e8ec]" : "checkerboard"}`}
               >

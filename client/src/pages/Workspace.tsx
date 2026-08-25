@@ -24,14 +24,15 @@ export default function Workspace() {
   const [currentStage, setCurrentStage] = useState<string | null>(null);
   const abortController = useRef<AbortController | null>(null);
   const choose = () => input.current?.click();
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
+  const loadFile = (f: File | undefined) => {
     if (f) {
       setFile(f);
       setSvg(null);
       toast.success("Imagen cargada. Ajusta los parámetros para continuar.");
     }
   };
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) =>
+    loadFile(e.target.files?.[0]);
   const detectedColors = useMemo(
     () => (svg ? detectColors(svg, bgHex) : []),
     [svg, bgHex]
@@ -120,6 +121,7 @@ export default function Workspace() {
             setMode={setMode}
             choose={choose}
             onFile={onFile}
+            onDropFile={loadFile}
             processing={processing}
             currentStage={currentStage}
             cancel={cancel}
