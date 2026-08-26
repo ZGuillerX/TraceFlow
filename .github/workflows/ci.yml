@@ -37,3 +37,9 @@ jobs:
         run: ruff check backend
       - name: Chequeo de sintaxis
         run: python -m compileall -q backend
+      - name: Instalar dependencias
+        working-directory: backend
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Tests
+        working-directory: backend
+        run: pytest -q

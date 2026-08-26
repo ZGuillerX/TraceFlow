@@ -11,3 +11,11 @@ ignore = ["E501"]
 # de inyeccion de dependencias de FastAPI, no el problema que B008 detecta
 # normalmente (un valor mutable evaluado una sola vez al importar).
 extend-immutable-calls = ["fastapi.File", "fastapi.Form", "fastapi.Depends", "fastapi.Query"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# agrega backend/ a sys.path al correr pytest, igual que hace
+# "uvicorn main:app" (--app-dir por defecto es el cwd) -- asi los tests
+# importan "from core.config import ..." igual que la app real, sin
+# trucos de sys.path a mano en cada archivo de test.
+pythonpath = ["."]
