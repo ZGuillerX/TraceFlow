@@ -263,7 +263,13 @@ export default function PreviewCanvas({
           (file && previewUrl) ? (
           <div
             style={{ transform: `scale(${zoom / 100})` }}
-            className="shrink-0 transition-transform"
+            // w-full max-w-[480px] igual que sus 3 posibles contenidos
+            // (CompareSlider o el preview simple) -- sin esto, este div
+            // no tiene ancho propio (shrink-to-fit) y su contenido es
+            // enteramente position:absolute (sin nada en flujo normal
+            // que le de una referencia de ancho), asi que colapsa a
+            // practicamente 0px en vez de mostrar el resultado.
+            className="w-full max-w-[480px] shrink-0 transition-transform"
           >
             {tool === "vectorize" && svg && displaySvg && file ? (
               <CompareSlider
