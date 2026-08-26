@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 
 interface PathColorPopoverProps {
@@ -22,6 +22,7 @@ export default function PathColorPopover({
   onClose,
 }: PathColorPopoverProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const [localHex, setLocalHex] = useState(hex);
 
   useEffect(() => {
     const onPointerDown = (e: PointerEvent) => {
@@ -40,14 +41,17 @@ export default function PathColorPopover({
     >
       <input
         type="color"
-        value={hex}
-        onChange={e => onChange(e.target.value)}
+        value={localHex}
+        onChange={e => {
+          setLocalHex(e.target.value);
+          onChange(e.target.value);
+        }}
         autoFocus
         className="h-8 w-10 cursor-pointer border border-[#DEDDD3] bg-white p-1"
         aria-label="Color de este trazo"
       />
       <span className="font-technical text-[11px] font-bold uppercase text-[#0C1330]">
-        {hex}
+        {localHex}
       </span>
       <button
         onClick={onClose}

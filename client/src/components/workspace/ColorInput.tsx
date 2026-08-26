@@ -14,11 +14,17 @@ interface ColorInputProps {
  * (al perder el foco o presionar Enter) -- mientras el usuario esta
  * a mitad de escribir un valor incompleto, no se dispara ningun
  * recoloreado. */
-export default function ColorInput({ value, onChange, label }: ColorInputProps) {
+export default function ColorInput({
+  value,
+  onChange,
+  label,
+}: ColorInputProps) {
   const [text, setText] = useState(value);
+  const [pickerValue, setPickerValue] = useState(value);
 
   useEffect(() => {
     setText(value);
+    setPickerValue(value);
   }, [value]);
 
   const commit = () => {
@@ -34,8 +40,11 @@ export default function ColorInput({ value, onChange, label }: ColorInputProps) 
     <div className="flex items-center gap-3">
       <input
         type="color"
-        value={value}
-        onChange={e => onChange(e.target.value)}
+        value={pickerValue}
+        onChange={e => {
+          setPickerValue(e.target.value);
+          onChange(e.target.value);
+        }}
         className="h-9 w-11 cursor-pointer border border-[#DEDDD3] bg-white p-1"
         aria-label={`Selector de color para ${label}`}
       />

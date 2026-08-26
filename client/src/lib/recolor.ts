@@ -90,6 +90,12 @@ export interface DetectedColor {
    * de color (p. ej. las distintas bandas de sombreado de un mismo
    * trazo). */
   members: string[];
+  /** Cantidad total de trazos del SVG pintados con algun hex de este
+   * grupo (suma de ocurrencias de cada member). Es la medida real de
+   * "cuanto cuesta" repintar el grupo -- se usa para decidir si el
+   * recoloreado en vivo (sin debounce) es viable o si conviene
+   * esperar a que el usuario termine de elegir el color. */
+  count: number;
 }
 
 /** Detecta las familias de color reales que tiene el SVG (agrupando
@@ -142,13 +148,13 @@ export function detectColors(
       const representative = members.reduce((best: string, hex: string) =>
         (counts.get(hex) ?? 0) > (counts.get(best) ?? 0) ? hex : best
       );
-      return { id: representative, hex: representative, members };
+      const count = members.reduce(
+        (sum, hex) => sum + (counts.get(hex) ?? 0),
+        0
+      );
+      return { id: representative, hex: representative, members, count };
     })
-    .sort((a, b) => {
-      const total = (m: string[]) =>
-        m.reduce((sum, hex) => sum + (counts.get(hex) ?? 0), 0);
-      return total(b.members) - total(a.members);
-    });
+    .sort((a, b) => b.count - a.count);
 }
 
 /** Repinta el SVG segun overrides: para cada color detectado con una

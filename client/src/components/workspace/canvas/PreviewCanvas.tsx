@@ -38,7 +38,7 @@ interface PreviewCanvasProps {
   detectedColors: DetectedColor[];
   colorOverrides: Record<string, string>;
   setColorOverride: (id: string, hex: string) => void;
-  setPathOverride: (traceIndex: number, hex: string) => void;
+  setPathOverride: (traceIndex: number, hex: string, originalHex: string) => void;
 }
 
 interface SelectedPath {
@@ -393,14 +393,12 @@ export default function PreviewCanvas({
         />
         {selectedPath && (
           <PathColorPopover
+            key={selectedPath.traceIndex}
             x={selectedPath.x}
             y={selectedPath.y}
             hex={selectedPath.hex}
             onChange={hex => {
-              setPathOverride(selectedPath.traceIndex, hex);
-              setSelectedPath(prev =>
-                prev ? { ...prev, hex: hex.toUpperCase() } : prev
-              );
+              setPathOverride(selectedPath.traceIndex, hex, selectedPath.hex);
             }}
             onClose={() => setSelectedPath(null)}
           />
