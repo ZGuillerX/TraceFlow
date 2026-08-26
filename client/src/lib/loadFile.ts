@@ -1,10 +1,10 @@
 import { toast } from "sonner";
+import { isAcceptedImage } from "@/lib/fileValidation";
 
-/** Patrón común de "cargar un archivo nuevo": si hay archivo, lo
- * guarda, limpia cualquier resultado derivado del archivo anterior
- * (onLoaded) y muestra el toast de éxito -- usado tanto en el Studio
- * como en la herramienta standalone de quitar fondo, cada uno con su
- * propio estado a resetear y su propio mensaje. */
+/** Carga un archivo nuevo, valida su tipo, guarda el archivo,
+ * limpia el resultado anterior y muestra un mensaje de éxito.
+ * Aplica tanto a input como a drag&drop, evitando duplicar lógica.
+ */
 export function commitFileLoad(
   f: File | undefined,
   setFile: (file: File) => void,
@@ -12,6 +12,10 @@ export function commitFileLoad(
   successMessage: string
 ): void {
   if (!f) return;
+  if (!isAcceptedImage(f)) {
+    toast.error("Solo se aceptan imágenes PNG, JPG o WEBP.");
+    return;
+  }
   setFile(f);
   onLoaded(f);
   toast.success(successMessage);

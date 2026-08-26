@@ -38,7 +38,11 @@ interface PreviewCanvasProps {
   detectedColors: DetectedColor[];
   colorOverrides: Record<string, string>;
   setColorOverride: (id: string, hex: string) => void;
-  setPathOverride: (traceIndex: number, hex: string, originalHex: string) => void;
+  setPathOverride: (
+    traceIndex: number,
+    hex: string,
+    originalHex: string
+  ) => void;
 }
 
 interface SelectedPath {
@@ -144,7 +148,7 @@ export default function PreviewCanvas({
   // de un transform propio, para heredar gratis los limites naturales
   // del scroll (no se puede arrastrar mas alla del contenido).
   const onCanvasPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (canvasTool !== "hand" || zoom <= 100 || !canvasRef.current) return;
+    if (canvasTool !== "hand" || !canvasRef.current) return;
     panState.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -266,7 +270,7 @@ export default function PreviewCanvas({
         onPointerUp={onCanvasPointerUp}
         onPointerLeave={onCanvasPointerUp}
         onWheel={onCanvasWheel}
-        className={`paper-grid relative flex min-h-[300px] items-center justify-center overflow-hidden border border-dashed p-4 transition-colors sm:min-h-[430px] ${dropzone.isDragging ? "border-[#1652F5] bg-[#eef3ff]" : "border-[#CBCAC0] bg-[#F4F3EE]"} ${canvasTool === "hand" && zoom > 100 ? "cursor-grab active:cursor-grabbing" : ""} ${canvasTool === "select" ? "cursor-crosshair" : ""}`}
+        className={`paper-grid relative flex min-h-[300px] items-center justify-center overflow-hidden border border-dashed p-4 transition-colors sm:min-h-[430px] ${dropzone.isDragging ? "border-[#1652F5] bg-[#eef3ff]" : "border-[#CBCAC0] bg-[#F4F3EE]"} ${canvasTool === "hand" ? "cursor-grab active:cursor-grabbing" : ""} ${canvasTool === "select" ? "cursor-crosshair" : ""}`}
       >
         {processing ? (
           <div className="flex h-[260px] w-full max-w-[480px] sm:h-[380px] flex-col items-center justify-center gap-4 border border-[#DEDDD3] bg-white p-6 shadow-[0_15px_35px_rgba(12,19,48,.1)]">
