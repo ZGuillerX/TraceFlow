@@ -1,20 +1,12 @@
-import {
-  ArrowDownToLine,
-  ChevronDown,
-  Eraser,
-  FileImage,
-  Palette,
-  RefreshCw,
-  Wand2,
-  WandSparkles,
-  Zap,
-} from "lucide-react";
+import { useRef, useState } from "react";
+import { Eraser, Info, Wand2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
-import type { DetectedColor } from "@/lib/recolor";
-import ColorInput from "./ColorInput";
+import type { RemoveBgQuality } from "@/lib/api";
+import type { StudioTool } from "./PreviewCanvas";
 
 interface SettingsPanelProps {
+  tool: StudioTool;
+  setTool: (t: StudioTool) => void;
   detail: number;
   setDetail: (v: number) => void;
   autoColors: boolean;
@@ -23,19 +15,59 @@ interface SettingsPanelProps {
   setColors: (v: number) => void;
   removeBg: boolean;
   setRemoveBg: (v: boolean) => void;
-  detectedColors: DetectedColor[];
-  colorOverrides: Record<string, string>;
-  setColorOverride: (id: string, hex: string) => void;
-  processing: boolean;
-  process: () => void;
-  download: () => void;
+  bgQuality: RemoveBgQuality;
+  setBgQuality: (q: RemoveBgQuality) => void;
 }
 
-/** Panel de controles de trazado del workspace de vectorización: nivel
- * de detalle, grupos de color (con detección automática), quitar
- * fondo, colores del trazo detectados, y las acciones de
- * generar/exportar. */
+const SWITCH_STYLE = {
+  className: "data-[state=checked]:bg-[#0C1330]",
+  thumbClassName: "data-[state=checked]:bg-[#D8F646]",
+};
+
+const HINTS: Record<string, string> = {
+  header: "Ajusta el detalle de trazado para equilibrar calidad y peso del archivo.",
+  detail: "Más detalle conserva bordes pequeños y textura.",
+  autoColors:
+    "Analiza la imagen y elige cuántos colores usar. Apágalo para controlarlo tú mismo.",
+  removeBg:
+    "El SVG sale con fondo transparente en vez de un color sólido de fondo. Tarda unos segundos más.",
+  quality:
+    "Rápida usa un modelo más liviano (~35% más rápido). Alta calidad es más lenta pero sin huecos de transparencia en detalles oscuros.",
+};
+
+// definido fuera del componente: si se anida dentro del render, React
+// lo ve como un tipo de componente nuevo en cada render (porque la
+// funcion se recrea) y lo remonta en vez de reutilizarlo.
+function HintButton({
+  id,
+  openHint,
+  onToggle,
+}: {
+  id: string;
+  openHint: string | null;
+  onToggle: (id: string, e: React.MouseEvent<HTMLButtonElement>) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={e => onToggle(id, e)}
+      aria-label="Más información"
+      aria-expanded={openHint === id}
+      className="shrink-0 text-[#9AA1B2] hover:text-[#1652F5]"
+    >
+      <Info size={13} />
+    </button>
+  );
+}
+
+/** Panel de controles del Studio: cuando la herramienta es "vectorize"
+ * muestra nivel de detalle, grupos de color y quitar fondo antes de
+ * vectorizar; cuando es "remove-bg" muestra solo el selector de
+ * calidad. Al fondo, el selector de herramienta que alterna entre
+ * ambos flujos dentro del mismo Studio. */
 export default function SettingsPanel({
+  tool,
+  setTool,
   detail,
   setDetail,
   autoColors,
@@ -44,158 +76,202 @@ export default function SettingsPanel({
   setColors,
   removeBg,
   setRemoveBg,
-  detectedColors,
-  colorOverrides,
-  setColorOverride,
-  processing,
-  process,
-  download,
+  bgQuality,
+  setBgQuality,
 }: SettingsPanelProps) {
+  // decorativos: se muestran y se mueven, pero nunca se leen en
+  // process() -- de momento solo diseño, se conectan mas adelante.
+  const [curveSmoothing, setCurveSmoothing] = useState(75);
+  const [colorThreshold, setColorThreshold] = useState(60);
+  const [openHint, setOpenHint] = useState<string | null>(null);
+  const [hintTop, setHintTop] = useState(0);
+  const asideRef = useRef<HTMLElement>(null);
+
+  // el popover se ancla al panel completo (no al icono que lo abrio)
+  // para que nunca se salga por los lados de un panel tan angosto --
+  // solo se calcula su posicion vertical, cerca del boton clickeado.
+  const onToggleHint = (id: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (openHint === id) {
+      setOpenHint(null);
+      return;
+    }
+    const btnRect = e.currentTarget.getBoundingClientRect();
+    const asideRect = asideRef.current!.getBoundingClientRect();
+    setHintTop(btnRect.bottom - asideRect.top + 6);
+    setOpenHint(id);
+  };
+
   return (
-    <aside className="border border-[#cfd5e1] bg-[#f6f6f2] p-5">
-      <div className="mb-6 flex items-center justify-between">
+    <aside
+      ref={asideRef}
+      onClick={() => setOpenHint(null)}
+      className="relative border border-[#DEDDD3] bg-[#FAF9F5] p-4"
+    >
+      <div className="mb-4 flex items-center justify-between">
         <div>
-          <div className="eyebrow">Ajustes</div>
-          <h2 className="mt-1 font-display text-lg font-semibold">
-            Controles de trazado
+          <div className="font-technical eyebrow">Ajustes</div>
+          <h2 className="mt-1 font-display text-base">
+            {tool === "vectorize" ? "Controles de trazado" : "Quitar fondo"}
           </h2>
         </div>
-        <Zap size={18} className="text-[#1687F8]" />
+        {tool === "vectorize" && (
+          <HintButton id="header" openHint={openHint} onToggle={onToggleHint} />
+        )}
       </div>
-      <label className="text-xs font-bold text-[#101A46]">
-        Nivel de detalle{" "}
-        <span className="float-right text-[#1687F8]">{detail}%</span>
-      </label>
-      <input
-        type="range"
-        min="10"
-        max="100"
-        value={detail}
-        onChange={e => setDetail(Number(e.target.value))}
-        className="mt-3 w-full accent-[#1687F8]"
-      />
-      <p className="mt-2 text-[11px] leading-relaxed text-[#7a8299]">
-        Más detalle conserva bordes pequeños y textura.
-      </p>
-      <div className="my-6 hairline" />
-      <div className="flex items-center justify-between gap-3">
-        <label
-          htmlFor="auto-colors"
-          className="flex items-center gap-2 text-xs font-bold text-[#101A46]"
-        >
-          <Wand2 size={15} className="text-[#1687F8]" /> Detectar colores
-          automáticamente
-        </label>
-        <Switch
-          id="auto-colors"
-          checked={autoColors}
-          onCheckedChange={setAutoColors}
-          className="data-[state=checked]:bg-[#1687F8]"
-        />
-      </div>
-      <p className="mt-2 text-[11px] leading-relaxed text-[#7a8299]">
-        Analiza la imagen y elige cuántos colores usar. Apágalo para
-        controlarlo tú mismo.
-      </p>
-      <label
-        className={`mt-4 block text-xs font-bold ${autoColors ? "text-[#b3b8c4]" : "text-[#101A46]"}`}
-      >
-        Grupos de color{" "}
-        <span
-          className={`float-right ${autoColors ? "text-[#b3b8c4]" : "text-[#1687F8]"}`}
-        >
-          {colors}
-        </span>
-      </label>
-      <input
-        type="range"
-        min="2"
-        max="50"
-        value={colors}
-        disabled={autoColors}
-        onChange={e => setColors(Number(e.target.value))}
-        className="mt-3 w-full accent-[#1687F8] disabled:opacity-40"
-      />
-      <div className="my-6 hairline" />
-      <label className="text-xs font-bold text-[#101A46]">
-        Formato de salida
-      </label>
-      <button
-        onClick={() =>
-          toast.info("SVG es el formato recomendado para este flujo.")
-        }
-        className="mt-3 flex w-full items-center justify-between border border-[#cbd3df] bg-white px-3 py-3 text-sm font-bold text-[#101A46]"
-      >
-        <span className="flex items-center gap-2">
-          <FileImage size={16} className="text-[#1687F8]" /> SVG
-        </span>
-        <ChevronDown size={15} className="text-[#7a8299]" />
-      </button>
-      <div className="my-6 hairline" />
-      <div className="flex items-center justify-between gap-3">
-        <label
-          htmlFor="remove-bg"
-          className="flex items-center gap-2 text-xs font-bold text-[#101A46]"
-        >
-          <Eraser size={15} className="text-[#1687F8]" /> Quitar fondo antes
-          de vectorizar
-        </label>
-        <Switch
-          id="remove-bg"
-          checked={removeBg}
-          onCheckedChange={setRemoveBg}
-          className="data-[state=checked]:bg-[#1687F8]"
-        />
-      </div>
-      <p className="mt-2 text-[11px] leading-relaxed text-[#7a8299]">
-        El SVG sale con fondo transparente en vez de un color solido de
-        fondo. Tarda unos segundos mas.
-      </p>
-      <div className="my-6 hairline" />
-      <div className="flex items-center gap-2 text-xs font-bold text-[#101A46]">
-        <Palette size={15} className="text-[#1687F8]" /> Colores del trazo
-      </div>
-      <p className="mt-2 text-[11px] leading-relaxed text-[#7a8299]">
-        Cambia cualquier color conservando su sombreado. Cada selector
-        empieza en el color que ya tiene la imagen — solo toca los que
-        quieras cambiar.
-      </p>
-      {detectedColors.length === 0 ? (
-        <p className="mt-3 text-[11px] text-[#9aa1b2]">
-          Genera una preview para ver los colores del trazo.
-        </p>
+
+      {tool === "vectorize" ? (
+        <>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#0C1330]">
+            Nivel de detalle
+            <HintButton id="detail" openHint={openHint} onToggle={onToggleHint} />
+            <span className="ml-auto text-[#0C1330]">{detail}%</span>
+          </div>
+          <input
+            type="range"
+            min="10"
+            max="100"
+            value={detail}
+            onChange={e => setDetail(Number(e.target.value))}
+            className="mt-3 w-full accent-[#0C1330]"
+          />
+          <label className="mt-4 block text-xs font-bold text-[#0C1330]">
+            Suavizado de curvas{" "}
+            <span className="float-right text-[#0C1330]">
+              {curveSmoothing}%
+            </span>
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={curveSmoothing}
+            onChange={e => setCurveSmoothing(Number(e.target.value))}
+            className="mt-3 w-full accent-[#0C1330]"
+          />
+          <label className="mt-3 block text-xs font-bold text-[#0C1330]">
+            Umbral de colores{" "}
+            <span className="float-right text-[#0C1330]">
+              {colorThreshold}
+            </span>
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={colorThreshold}
+            onChange={e => setColorThreshold(Number(e.target.value))}
+            className="mt-3 w-full accent-[#0C1330]"
+          />
+          <div className="my-4 hairline" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="auto-colors"
+                className="flex items-center gap-2 text-xs font-bold text-[#0C1330]"
+              >
+                <Wand2 size={15} className="text-[#1652F5]" /> Detectar
+                colores automáticamente
+              </label>
+              <HintButton id="autoColors" openHint={openHint} onToggle={onToggleHint} />
+            </div>
+            <Switch
+              id="auto-colors"
+              checked={autoColors}
+              onCheckedChange={setAutoColors}
+              {...SWITCH_STYLE}
+            />
+          </div>
+          <label
+            className={`mt-3 block text-xs font-bold ${autoColors ? "text-[#B3B8C4]" : "text-[#0C1330]"}`}
+          >
+            Grupos de color{" "}
+            <span
+              className={`float-right ${autoColors ? "text-[#B3B8C4]" : "text-[#0C1330]"}`}
+            >
+              {colors}
+            </span>
+          </label>
+          <input
+            type="range"
+            min="2"
+            max="50"
+            value={colors}
+            disabled={autoColors}
+            onChange={e => setColors(Number(e.target.value))}
+            className="mt-3 w-full accent-[#0C1330] disabled:opacity-40"
+          />
+          <div className="my-4 hairline" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="remove-bg"
+                className="flex items-center gap-2 text-xs font-bold text-[#0C1330]"
+              >
+                <Eraser size={15} className="text-[#1652F5]" /> Quitar fondo
+                antes de vectorizar
+              </label>
+              <HintButton id="removeBg" openHint={openHint} onToggle={onToggleHint} />
+            </div>
+            <Switch
+              id="remove-bg"
+              checked={removeBg}
+              onCheckedChange={setRemoveBg}
+              {...SWITCH_STYLE}
+            />
+          </div>
+        </>
       ) : (
-        <div className="mt-3 flex flex-col gap-2">
-          {detectedColors.map(color => {
-            const current = colorOverrides[color.id] ?? `#${color.hex}`;
-            return (
-              <ColorInput
-                key={color.id}
-                value={current}
-                onChange={hex => setColorOverride(color.id, hex)}
-                label={current}
-              />
-            );
-          })}
+        <>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#0C1330]">
+            Calidad
+            <HintButton id="quality" openHint={openHint} onToggle={onToggleHint} />
+          </div>
+          <div className="mt-3 flex border border-[#DEDDD3] bg-white p-1">
+            <button
+              onClick={() => setBgQuality("fast")}
+              className={`flex-1 px-3 py-2 text-xs font-bold ${bgQuality === "fast" ? "bg-[#1652F5] text-white" : "text-[#7A8194]"}`}
+            >
+              Rápida
+            </button>
+            <button
+              onClick={() => setBgQuality("high")}
+              className={`flex-1 px-3 py-2 text-xs font-bold ${bgQuality === "high" ? "bg-[#1652F5] text-white" : "text-[#7A8194]"}`}
+            >
+              Alta calidad
+            </button>
+          </div>
+        </>
+      )}
+
+      <div className="my-4 hairline" />
+      <div className="font-technical mb-2 text-[10px] font-bold uppercase tracking-[.15em] text-[#9AA1B2]">
+        Herramienta
+      </div>
+      <div className="flex border border-[#DEDDD3] bg-white p-1">
+        <button
+          onClick={() => setTool("vectorize")}
+          className={`flex-1 px-3 py-2 text-xs font-bold ${tool === "vectorize" ? "bg-[#0C1330] text-white" : "text-[#7A8194]"}`}
+        >
+          Vectorizar
+        </button>
+        <button
+          onClick={() => setTool("remove-bg")}
+          className={`flex-1 px-3 py-2 text-xs font-bold ${tool === "remove-bg" ? "bg-[#0C1330] text-white" : "text-[#7A8194]"}`}
+        >
+          Quitar fondo
+        </button>
+      </div>
+
+      {openHint && (
+        <div
+          onClick={e => e.stopPropagation()}
+          className="absolute left-4 right-4 z-30 border border-[#DEDDD3] bg-white p-2.5 text-[11px] font-normal leading-relaxed text-[#4B5266] shadow-lg"
+          style={{ top: hintTop }}
+        >
+          {HINTS[openHint]}
         </div>
       )}
-      <button
-        onClick={process}
-        className="button-press mt-8 flex w-full items-center justify-center gap-2 bg-[#1687F8] px-4 py-3.5 text-sm font-bold text-white hover:bg-[#0e74dd]"
-      >
-        {processing ? (
-          <RefreshCw size={16} className="animate-spin" />
-        ) : (
-          <WandSparkles size={16} />
-        )}{" "}
-        {processing ? "Trazando…" : "Generar preview"}
-      </button>
-      <button
-        onClick={download}
-        className="button-press mt-2 flex w-full items-center justify-center gap-2 border border-[#cbd3df] bg-white px-4 py-3 text-sm font-bold text-[#101A46] hover:border-[#1687F8]"
-      >
-        <ArrowDownToLine size={16} /> Exportar SVG
-      </button>
     </aside>
   );
 }

@@ -1,9 +1,22 @@
-import { useState, type DragEvent, type RefObject } from "react";
-import { Info, MousePointer2, Upload } from "lucide-react";
-import empty from "@/assets/empty-state.svg";
+import { useEffect, useState, type DragEvent, type RefObject } from "react";
+import {
+  Hand,
+  ImagePlus,
+  Maximize,
+  MousePointer2,
+  Palette,
+  RefreshCw,
+  X,
+} from "lucide-react";
+import CompareSlider from "@/components/studio/CompareSlider";
+import ColorInput from "./ColorInput";
+import type { DetectedColor } from "@/lib/recolor";
+
+export type StudioTool = "vectorize" | "remove-bg";
 
 interface PreviewCanvasProps {
   input: RefObject<HTMLInputElement | null>;
+  tool: StudioTool;
   file: File | null;
   svg: string | null;
   displaySvg: string | null;
@@ -12,9 +25,23 @@ interface PreviewCanvasProps {
   choose: () => void;
   onFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDropFile: (file: File | undefined) => void;
+  onRemove: () => void;
   processing: boolean;
   currentStage: string | null;
   cancel: () => void;
+  removingBg: boolean;
+  removedBgUrl: string | null;
+  detectedColors: DetectedColor[];
+  colorOverrides: Record<string, string>;
+  setColorOverride: (id: string, hex: string) => void;
+}
+
+const MAX_VISIBLE_SWATCHES = 6;
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -39,13 +66,14 @@ const STAGE_PROGRESS: Record<string, number> = {
   final: 100,
 };
 
-/** Lienzo de preview del workspace de vectorización: dropzone antes de
- * cargar una imagen, silueta de "lista para vectorizar" con el archivo
- * cargado, una barra de progreso en vivo mientras vectoriza (una etapa
- * del pipeline por evento SSE), y el SVG resultante (con toggle vista
- * previa/trazados). */
+/** Lienzo de preview del Studio: dropzone (drag&drop + clic), chip de
+ * la fuente cargada junto al titulo, barra de progreso en vivo
+ * mientras vectoriza (una etapa del pipeline por evento SSE), vista
+ * previa real de la imagen antes de convertir, el comparador
+ * Original/SVG una vez listo, y los colores detectados. */
 export default function PreviewCanvas({
   input,
+  tool,
   file,
   svg,
   displaySvg,
@@ -54,12 +82,36 @@ export default function PreviewCanvas({
   choose,
   onFile,
   onDropFile,
+  onRemove,
   processing,
   currentStage,
   cancel,
+  removingBg,
+  removedBgUrl,
+  detectedColors,
+  colorOverrides,
+  setColorOverride,
 }: PreviewCanvasProps) {
   const progress = currentStage ? (STAGE_PROGRESS[currentStage] ?? 0) : 0;
+  const visibleSwatches = detectedColors.slice(0, MAX_VISIBLE_SWATCHES);
+  const remainingCount = detectedColors.length - visibleSwatches.length;
   const [isDragging, setIsDragging] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(null);
+      setDims(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    const img = new Image();
+    img.onload = () => setDims({ w: img.naturalWidth, h: img.naturalHeight });
+    img.src = url;
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   // processing bloquea el drop: soltar una imagen nueva a medio
   // trazado interrumpiria el proceso en curso de forma confusa (para
@@ -81,131 +133,137 @@ export default function PreviewCanvas({
   };
 
   return (
-    <section className="min-h-[560px] border border-[#cfd5e1] bg-white p-4 shadow-[0_18px_50px_rgba(16,26,70,.06)] sm:p-6">
-      <div className="mb-5 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs font-bold text-[#101A46]">
-          <MousePointer2 size={15} className="text-[#1687F8]" /> Lienzo de
-          preview
+    <section className="border border-[#DEDDD3] bg-white p-4 shadow-[0_18px_50px_rgba(12,19,48,.06)] sm:p-6">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-[#0C1330]">
+            <MousePointer2 size={15} className="text-[#1652F5]" /> Lienzo de
+            preview
+          </div>
+          {file && (
+            <div className="flex items-center gap-2 border border-[#DEDDD3] bg-[#FAF9F5] py-1 pl-1 pr-2">
+              {previewUrl && (
+                <img
+                  src={previewUrl}
+                  alt=""
+                  className="checkerboard h-7 w-7 shrink-0 border border-[#E3E2D9] object-cover"
+                />
+              )}
+              <span className="max-w-[140px] truncate text-[11px] font-bold text-[#0C1330]">
+                {file.name}
+              </span>
+              <span className="font-technical whitespace-nowrap text-[10px] text-[#7A8194]">
+                {dims ? `${dims.w}×${dims.h}` : "…"} · {formatBytes(file.size)}
+              </span>
+              <button
+                onClick={onRemove}
+                disabled={processing}
+                aria-label="Quitar imagen"
+                className="text-[#7A8194] hover:text-[#0C1330] disabled:opacity-40"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
         </div>
-        <div className="flex border border-[#dfe2ea] bg-[#f2f3f5] p-1">
-          <button
-            onClick={() => setMode("preview")}
-            className={`px-3 py-1.5 text-xs font-bold ${mode === "preview" ? "bg-white text-[#101A46] shadow-sm" : "text-[#7a8299]"}`}
-          >
-            Vista previa
-          </button>
-          <button
-            onClick={() => setMode("paths")}
-            className={`px-3 py-1.5 text-xs font-bold ${mode === "paths" ? "bg-white text-[#101A46] shadow-sm" : "text-[#7a8299]"}`}
-          >
-            Trazados
-          </button>
-        </div>
+        {tool === "vectorize" && (
+          <div className="flex border border-[#DEDDD3] bg-[#F2F3F5] p-1">
+            <button
+              onClick={() => setMode("preview")}
+              className={`px-3 py-1.5 text-xs font-bold ${mode === "preview" ? "bg-white text-[#0C1330] shadow-sm" : "text-[#7A8194]"}`}
+            >
+              Vista previa
+            </button>
+            <button
+              onClick={() => setMode("paths")}
+              className={`px-3 py-1.5 text-xs font-bold ${mode === "paths" ? "bg-white text-[#0C1330] shadow-sm" : "text-[#7A8194]"}`}
+            >
+              Trazados
+            </button>
+          </div>
+        )}
       </div>
       <div
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
-        className={`paper-grid relative flex min-h-[430px] items-center justify-center overflow-hidden border border-dashed transition-colors ${isDragging ? "border-[#1687F8] bg-[#eaf3ff]" : file ? "border-[#cbd3df] bg-[#f8fbff]" : "border-[#cbd3df] bg-[#fafaf7]"}`}
+        className={`paper-grid relative flex min-h-[430px] items-center justify-center overflow-hidden border border-dashed transition-colors ${isDragging ? "border-[#1652F5] bg-[#eef3ff]" : "border-[#CBCAC0] bg-[#F4F3EE]"}`}
       >
         {processing ? (
-          <div className="flex h-[380px] w-full max-w-[480px] flex-col items-center justify-center gap-4 border border-[#cfd8e6] bg-white p-6 shadow-[0_15px_35px_rgba(16,26,70,.1)]">
-            <div className="font-display text-3xl font-semibold tabular-nums text-[#101A46]">
+          <div className="flex h-[380px] w-full max-w-[480px] flex-col items-center justify-center gap-4 border border-[#DEDDD3] bg-white p-6 shadow-[0_15px_35px_rgba(12,19,48,.1)]">
+            <div className="font-display text-3xl tabular-nums text-[#0C1330]">
               {progress}%
             </div>
-            <div className="h-1.5 w-full max-w-[260px] overflow-hidden rounded-full bg-[#eef0f4]">
+            <div className="h-1.5 w-full max-w-[260px] overflow-hidden rounded-full bg-[#E9E8DE]">
               <div
-                className="h-full rounded-full bg-[#1687F8] transition-[width] duration-500 ease-out"
+                className="h-full rounded-full bg-[#1652F5] transition-[width] duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-[11px] font-bold uppercase tracking-[.15em] text-[#7a8299]">
+            <span className="text-[11px] font-bold uppercase tracking-[.15em] text-[#7A8194]">
               {(currentStage && STAGE_LABELS[currentStage]) || "Procesando"}…
             </span>
             <button
               onClick={cancel}
-              className="text-xs font-bold text-[#7a8299] underline decoration-dotted hover:text-[#101A46]"
+              className="text-xs font-bold text-[#7A8194] underline decoration-dotted hover:text-[#0C1330]"
             >
               Cancelar
             </button>
           </div>
-        ) : svg ? (
-          <div
-            className={`relative flex h-[380px] w-full max-w-[480px] items-center justify-center overflow-hidden border border-[#cfd8e6] p-6 shadow-[0_15px_35px_rgba(16,26,70,.1)] ${mode === "paths" ? "bg-white" : "checkerboard"}`}
+        ) : removingBg ? (
+          <div className="flex h-[380px] w-full max-w-[480px] flex-col items-center justify-center gap-4 border border-[#DEDDD3] bg-white p-6 shadow-[0_15px_35px_rgba(12,19,48,.1)]">
+            <RefreshCw size={28} className="animate-spin text-[#1652F5]" />
+            <span className="text-[11px] font-bold uppercase tracking-[.15em] text-[#7A8194]">
+              Quitando fondo…
+            </span>
+          </div>
+        ) : tool === "vectorize" && svg && displaySvg && file ? (
+          <CompareSlider
+            file={file}
+            rightLabel="SVG (Vista previa)"
+            rightBadge="Vector"
+            checkerboard={mode !== "paths"}
           >
             <div
-              className="h-full w-full [&_svg]:h-full [&_svg]:w-full [&_svg]:object-contain"
-              dangerouslySetInnerHTML={{ __html: displaySvg! }}
+              className="h-full w-full p-6 [&_svg]:h-full [&_svg]:w-full [&_svg]:object-contain"
+              dangerouslySetInnerHTML={{ __html: displaySvg }}
             />
             {mode === "paths" && (
-              <div className="absolute inset-0 border-2 border-[#7C3AED]/40" />
+              <div className="pointer-events-none absolute inset-0 border-2 border-[#1652F5]/40" />
             )}
-          </div>
-        ) : file ? (
-          <div className="relative flex h-[270px] w-[340px] items-center justify-center border border-[#cfd8e6] bg-white shadow-[0_15px_35px_rgba(16,26,70,.1)]">
-            <div className="absolute left-8 top-10 grid grid-cols-4 gap-2 opacity-60">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <span key={i} className="h-3 w-3 rounded-[2px] bg-[#1687F8]" />
-              ))}
+          </CompareSlider>
+        ) : tool === "remove-bg" && removedBgUrl && file ? (
+          <CompareSlider file={file} rightLabel="Sin fondo" rightBadge="PNG">
+            <img
+              src={removedBgUrl}
+              alt="Imagen sin fondo"
+              className="h-full w-full object-contain p-6"
+            />
+          </CompareSlider>
+        ) : file && previewUrl ? (
+          <div className="checkerboard relative flex h-[380px] w-full max-w-[480px] items-center justify-center overflow-hidden border border-[#DEDDD3] shadow-[0_15px_35px_rgba(12,19,48,.1)]">
+            <div className="font-technical absolute left-4 top-4 z-10 bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.15em] text-[#0C1330] shadow-sm">
+              Vista previa
             </div>
-            <svg viewBox="0 0 220 160" className="h-44 w-56">
-              <path
-                d="M20 88 C52 40, 76 30, 108 50 C140 70, 160 60, 196 24"
-                fill="none"
-                stroke="#1687F8"
-                strokeWidth="5"
-                strokeLinecap="round"
-              />
-              <path
-                d="M35 118 C88 118, 92 76, 132 76 C162 76, 170 105, 195 105"
-                fill="none"
-                stroke="#22C7E8"
-                strokeWidth="4"
-                strokeLinecap="round"
-              />
-              <circle
-                cx="20"
-                cy="88"
-                r="7"
-                fill="white"
-                stroke="#101A46"
-                strokeWidth="4"
-              />
-              <circle
-                cx="196"
-                cy="24"
-                r="7"
-                fill="white"
-                stroke="#1687F8"
-                strokeWidth="4"
-              />
-              <circle
-                cx="35"
-                cy="118"
-                r="7"
-                fill="white"
-                stroke="#101A46"
-                strokeWidth="4"
-              />
-            </svg>
-            <span className="absolute bottom-4 left-4 right-4 truncate text-center text-[11px] font-bold text-[#101A46]">
-              {file.name}
-            </span>
+            <img
+              src={previewUrl}
+              alt={file.name}
+              className="h-full w-full object-contain p-6"
+            />
           </div>
         ) : (
           <button
             onClick={choose}
-            className="group flex flex-col items-center text-center"
+            className="group flex flex-col items-center gap-3 text-center"
           >
-            <img
-              src={empty}
-              alt=""
-              className="mb-5 h-32 w-40 object-contain opacity-80 transition-transform group-hover:-translate-y-1"
+            <ImagePlus
+              size={40}
+              className="text-[#9AA1B2] transition-transform group-hover:-translate-y-1"
             />
-            <span className="font-display text-lg font-semibold text-[#101A46]">
+            <span className="font-display text-lg text-[#0C1330]">
               Suelta una imagen aquí
             </span>
-            <span className="mt-2 text-xs text-[#7a8299]">
+            <span className="text-xs text-[#7A8194]">
               o haz clic para explorar · PNG, JPG, WEBP
             </span>
           </button>
@@ -218,22 +276,77 @@ export default function PreviewCanvas({
           className="hidden"
         />
       </div>
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs text-[#7a8299]">
-          <Info size={14} />{" "}
-          {svg
-            ? "SVG generado con vtracer"
-            : file
-              ? "Lista para vectorizar"
-              : "Tu imagen permanece en este espacio"}
+      <div className="font-technical mt-3 flex items-center justify-between border border-[#DEDDD3] bg-[#FBFBF7] px-3 py-2 text-[11px] text-[#7A8194]">
+        <div className="flex items-center gap-3">
+          <span>100%</span>
+          <button aria-label="Herramienta mano" className="hover:text-[#0C1330]">
+            <Hand size={14} />
+          </button>
+          <button
+            aria-label="Pantalla completa"
+            className="hover:text-[#0C1330]"
+          >
+            <Maximize size={14} />
+          </button>
         </div>
-        <button
-          onClick={choose}
-          className="flex items-center gap-2 border border-[#dfe2ea] px-3 py-2 text-xs font-bold text-[#101A46] hover:border-[#1687F8]"
-        >
-          <Upload size={14} /> {file ? "Reemplazar imagen" : "Elegir archivo"}
-        </button>
+        <input
+          type="range"
+          disabled
+          defaultValue={50}
+          className="w-32 accent-[#1652F5] opacity-60"
+        />
       </div>
+
+      {tool === "vectorize" && (
+      <div className="mt-5">
+        <div className="flex items-center gap-2 text-xs font-bold text-[#0C1330]">
+          <Palette size={14} className="text-[#1652F5]" /> Colores detectados
+        </div>
+        {detectedColors.length === 0 ? (
+          <p className="mt-2 text-[11px] text-[#9AA1B2]">
+            Genera una preview para ver los colores del trazo.
+          </p>
+        ) : (
+          <>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {visibleSwatches.map(color => (
+                <span
+                  key={color.id}
+                  title={colorOverrides[color.id] ?? `#${color.hex}`}
+                  className="h-6 w-6 shrink-0 rounded-full border border-[#DEDDD3]"
+                  style={{
+                    backgroundColor:
+                      colorOverrides[color.id] ?? `#${color.hex}`,
+                  }}
+                />
+              ))}
+              {remainingCount > 0 && (
+                <span className="flex h-6 shrink-0 items-center justify-center rounded-full border border-[#C8E93F] bg-[#F2F9DA] px-2 text-[10px] font-bold text-[#5F7A0C]">
+                  +{remainingCount}
+                </span>
+              )}
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-[#7A8194]">
+              Cambia cualquier color conservando su sombreado. Cada selector
+              empieza en el color que ya tiene la imagen.
+            </p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {detectedColors.map(color => {
+                const current = colorOverrides[color.id] ?? `#${color.hex}`;
+                return (
+                  <ColorInput
+                    key={color.id}
+                    value={current}
+                    onChange={hex => setColorOverride(color.id, hex)}
+                    label={current}
+                  />
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+      )}
     </section>
   );
 }

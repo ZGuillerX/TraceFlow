@@ -1,233 +1,283 @@
-/* TraceFlow / Vector Atelier: landing asimétrica, editorial y centrada en la transformación visual. */
-import {
-  ArrowRight,
-  Check,
-  Eraser,
-  Layers3,
-  ScanLine,
-  WandSparkles,
-} from "lucide-react";
+/* TraceFlow / Vector Atelier: landing fiel al mockup "Vectora Studio" -- tipografia Anton + JetBrains Mono, paleta crema/navy/azul/verde lima. */
+import { ArrowRight, Check } from "lucide-react";
 import { Link } from "wouter";
-import TraceFlowShell from "@/components/TraceFlowShell";
+import mark from "@/assets/mark.svg";
 import hero from "@/assets/hero-illustration.webp";
 import sample from "@/assets/sample-transform.webp";
 
+const STEPS: [string, string, string][] = [
+  ["01", "Carga tu fuente", "PNG, JPG o WEBP."],
+  ["02", "Ajusta el trazado", "Ajusta detalle, suavizado y color."],
+  [
+    "03",
+    "Exporta el resultado",
+    "Descarga un asset limpio para tu próxima pantalla.",
+  ],
+];
+
 export default function Home() {
   return (
-    <TraceFlowShell>
+    <div className="min-h-screen bg-[#FAF9F5] text-[#0C1330]">
+      <header className="flex items-center justify-between gap-8 border-b border-[#E3E2D9] px-6 py-5 sm:px-10">
+        <Link href="/" className="flex items-center gap-3">
+          <img src={mark} alt="" className="h-10 w-10 object-contain" />
+          <span className="font-display text-2xl text-[#0C1330]">
+            TraceFlow
+          </span>
+        </Link>
+        <nav className="hidden items-center gap-9 text-sm font-medium text-[#454C63] md:flex">
+          <a href="#como-funciona" className="hover:text-[#0C1330]">
+            Cómo funciona
+          </a>
+          <a href="#capacidades" className="hover:text-[#0C1330]">
+            Capacidades
+          </a>
+        </nav>
+        <Link
+          href="/workspace"
+          className="button-press inline-flex items-center gap-2 bg-[#0C1330] px-5 py-3.5 text-sm font-bold text-[#D8F646] hover:bg-[#18234f]"
+        >
+          Abrir estudio <ArrowRight size={15} />
+        </Link>
+      </header>
+
       <main>
-        <section className="container relative grid min-h-[650px] items-center gap-12 overflow-hidden py-20 lg:grid-cols-[.9fr_1.1fr] lg:py-24">
-          <div className="pointer-events-none absolute -left-16 top-16 h-56 w-56 rounded-full bg-[#22C7E8]/10 blur-3xl" />
-          <div className="relative z-10 max-w-[620px] reveal">
-            <div className="eyebrow mb-6 flex items-center gap-3">
-              <span className="h-px w-8 bg-[#1687F8]" /> Procesamiento
+        <section className="grid items-center gap-12 border-b border-[#E3E2D9] px-6 py-16 sm:px-10 lg:grid-cols-[.9fr_1.1fr] lg:py-20">
+          <div className="max-w-[560px]">
+            <div className="eyebrow flex items-center gap-3">
+              <span className="h-[3px] w-8 bg-[#B9D62F]" /> Procesamiento
               inteligente de imágenes
             </div>
-            <h1 className="font-display text-5xl font-semibold leading-[.98] tracking-[-0.065em] text-[#101A46] sm:text-7xl">
+            <h1 className="font-display mt-6 text-5xl leading-[.95] tracking-[-.01em] text-[#0C1330] sm:text-7xl">
               De píxeles sueltos a{" "}
-              <span className="text-[#1687F8]">curvas</span> que puedes usar.
+              <span className="text-[#1652F5]">curvas</span> que puedes usar
+              <span className="text-[#D8F646]">.</span>
             </h1>
-            <p className="mt-7 max-w-[500px] text-lg leading-relaxed text-[#626c86]">
-              Convierte imágenes raster en SVGs limpios y elimina fondos con un
-              flujo rápido, preciso y pensado para resultados profesionales.
+            <p className="mt-7 max-w-[480px] text-[17px] leading-relaxed text-[#4B5266]">
+              Convierte imágenes raster en SVGs limpios y elimina fondos con
+              un flujo rápido, preciso y pensado para resultados
+              profesionales.
             </p>
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-9 flex flex-col gap-4 sm:flex-row">
               <Link
                 href="/workspace"
-                className="button-press inline-flex items-center justify-center gap-2 rounded-xl bg-[#1687F8] px-5 py-3.5 text-sm font-bold text-white shadow-[0_12px_22px_rgba(22,135,248,.2)] hover:bg-[#0e74dd]"
+                className="button-press inline-flex items-center justify-center gap-3 bg-[#1652F5] px-7 py-5 text-base font-bold text-white hover:bg-[#0B3ECB]"
               >
-                Probar vectorizador <ArrowRight size={16} />
+                Probar vectorizador <ArrowRight size={18} />
               </Link>
               <Link
                 href="/background-remover"
-                className="button-press inline-flex items-center justify-center gap-2 rounded-xl border border-[#cfd5e1] bg-white px-5 py-3.5 text-sm font-bold text-[#101A46] hover:border-[#1687F8]"
+                className="button-press inline-flex items-center justify-center border border-[#0C1330] px-8 py-5 text-base font-bold text-[#0C1330] hover:bg-[#0C1330] hover:text-[#D8F646]"
               >
                 Quitar un fondo
               </Link>
             </div>
-            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs font-semibold text-[#7a8299]">
-              <span className="flex items-center gap-2">
-                <Check size={14} className="text-[#1687F8]" /> Salida lista para
-                SVG
+            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-[#4B5266]">
+              <span className="flex items-center gap-2.5">
+                <Check size={14} className="text-[#8FB811]" /> Salida lista
+                para SVG
               </span>
-              <span className="flex items-center gap-2">
-                <Check size={14} className="text-[#1687F8]" /> PNG transparente
+              <span className="h-4 w-px bg-[#D8D7CD]" />
+              <span className="flex items-center gap-2.5">
+                <Check size={14} className="text-[#8FB811]" /> PNG
+                transparente
               </span>
-              <span className="flex items-center gap-2">
-                <Check size={14} className="text-[#1687F8]" /> Sin conocimientos
-                avanzados
+              <span className="h-4 w-px bg-[#D8D7CD]" />
+              <span className="flex items-center gap-2.5">
+                <Check size={14} className="text-[#8FB811]" /> Sin
+                conocimientos avanzados
               </span>
             </div>
           </div>
-          <div className="relative reveal reveal-delay-1">
-            <div className="absolute -inset-6 rounded-[2rem] bg-[#1687F8]/5 blur-2xl" />
-            <div className="relative overflow-hidden rounded-[2rem] border border-[#dfe2ea] bg-white p-3 shadow-[0_24px_70px_rgba(16,26,70,.12)]">
+
+          <div className="border border-[#DEDDD3] bg-white p-2.5">
+            <div className="relative">
               <img
                 src={hero}
-                alt="Trazos Bézier y píxeles transformándose en el flujo de TraceFlow"
-                className="h-[330px] w-full rounded-[1.35rem] object-cover sm:h-[420px]"
+                alt="Píxeles transformándose en curvas Bézier"
+                className="block h-[300px] w-full object-cover sm:h-[430px]"
               />
-              <div className="absolute bottom-8 left-8 right-8 flex items-center justify-between rounded-xl border border-white/70 bg-white/90 px-4 py-3 shadow-lg backdrop-blur">
-                <div>
-                  <div className="eyebrow">Motor vectorial</div>
-                  <div className="mt-1 text-sm font-bold text-[#101A46]">
-                    Trazos limpios, menos nodos
-                  </div>
-                </div>
-                <div className="flex gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-[#101A46]" />
-                  <span className="h-2 w-2 rounded-full bg-[#1687F8]" />
-                  <span className="h-2 w-2 rounded-full bg-[#22C7E8]" />
-                </div>
+              <div className="eyebrow absolute left-5 top-4.5 flex items-center gap-3 text-[#1652F5]">
+                Raster
+                <ArrowRight size={16} className="text-[#0C1330]" />
+                <span className="text-[#7F9313]">Vector</span>
               </div>
             </div>
-            <div className="absolute -right-4 -top-6 hidden h-20 w-20 rounded-2xl border border-[#dfe2ea] bg-[#fbfbf8] p-4 shadow-lg sm:block">
-              <div className="grid grid-cols-3 gap-1.5">
-                {Array.from({ length: 9 }).map((_, i) => (
-                  <span
-                    key={i}
-                    className={`aspect-square rounded-[2px] ${i % 3 === 0 ? "bg-[#1687F8]" : i % 4 === 0 ? "bg-[#7C3AED]" : "bg-[#101A46]"}`}
-                  />
-                ))}
+            <div className="flex items-center justify-between px-2.5 py-4">
+              <div className="flex items-center gap-4">
+                <span className="flex h-9 w-9 items-center justify-center border border-[#DEDDD3]">
+                  <img src={mark} alt="" className="h-6 w-6 object-contain" />
+                </span>
+                <span className="font-technical text-[13px] font-bold uppercase tracking-[.16em] text-[#0C1330]">
+                  Motor vectorial
+                </span>
+              </div>
+              <div className="flex gap-1.5">
+                <span className="h-2.5 w-2.5 bg-[#1652F5]" />
+                <span className="h-2.5 w-2.5 bg-[#0C1330]" />
+                <span className="h-2.5 w-2.5 bg-[#1652F5]" />
               </div>
             </div>
           </div>
         </section>
 
         <section
-          id="features"
-          className="border-y border-[#dfe2ea] bg-[#f5f5f1] py-20"
+          id="capacidades"
+          className="grid gap-14 border-b border-[#E3E2D9] bg-[#F4F3ED] px-6 py-16 sm:px-10 lg:grid-cols-[.85fr_1.15fr]"
         >
-          <div className="container">
-            <div className="grid gap-12 lg:grid-cols-[.7fr_1.3fr]">
-              <div>
-                <div className="eyebrow">Un estudio, dos flujos</div>
-                <h2 className="mt-4 font-display text-4xl font-semibold tracking-[-.05em] text-[#101A46]">
-                  La herramienta que entiende lo que quieres conservar.
-                </h2>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Link
-                  href="/workspace"
-                  className="group rounded-2xl border border-[#dfe2ea] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#1687F8] hover:shadow-[0_15px_30px_rgba(16,26,70,.08)]"
-                >
-                  <div className="mb-12 flex items-center justify-between">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e8f5ff] text-[#1687F8]">
-                      <WandSparkles size={20} />
-                    </span>
-                    <ArrowRight
-                      size={18}
-                      className="text-[#a4abc0] transition-transform group-hover:translate-x-1 group-hover:text-[#1687F8]"
-                    />
-                  </div>
-                  <h3 className="font-display text-xl font-semibold text-[#101A46]">
-                    Vectorizar raster
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-[#69728a]">
-                    Convierte logos, ilustraciones y capturas en SVGs editables
-                    con menos nodos y más fidelidad.
-                  </p>
-                </Link>
-                <Link
-                  href="/background-remover"
-                  className="group rounded-2xl border border-[#dfe2ea] bg-white p-6 transition-all hover:-translate-y-1 hover:border-[#22C7E8] hover:shadow-[0_15px_30px_rgba(16,26,70,.08)]"
-                >
-                  <div className="mb-12 flex items-center justify-between">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e7fbfc] text-[#0d9fb4]">
-                      <Eraser size={20} />
-                    </span>
-                    <ArrowRight
-                      size={18}
-                      className="text-[#a4abc0] transition-transform group-hover:translate-x-1 group-hover:text-[#0d9fb4]"
-                    />
-                  </div>
-                  <h3 className="font-display text-xl font-semibold text-[#101A46]">
-                    Quitar fondo
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-[#69728a]">
-                    Aísla el sujeto principal con bordes limpios y exporta
-                    imágenes listas para componer.
-                  </p>
-                </Link>
-              </div>
+          <div>
+            <div className="eyebrow flex items-center gap-3">
+              <span className="h-[3px] w-8 bg-[#B9D62F]" /> Un estudio, dos
+              flujos
             </div>
+            <h2 className="font-display mt-6 max-w-[420px] text-4xl leading-tight text-[#0C1330] sm:text-5xl">
+              La herramienta que entiende lo que quieres conservar
+              <span className="text-[#B9D62F]">.</span>
+            </h2>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <Link
+              href="/workspace"
+              className="block border border-[#DEDDD3] bg-[#FDFDFA] p-6 transition-colors hover:border-[#0C1330]"
+            >
+              <div className="flex items-start justify-between">
+                <span className="flex h-[52px] w-[52px] items-center justify-center bg-[#D8F646]">
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                    <path
+                      d="M6 20C11 20 12.5 8 20 8"
+                      stroke="#0C1330"
+                      strokeWidth="2"
+                    />
+                    <rect x="3" y="17" width="6" height="6" fill="#0C1330" />
+                    <rect x="17" y="5" width="5" height="5" fill="#0C1330" />
+                  </svg>
+                </span>
+                <ArrowRight size={20} className="text-[#0C1330]" />
+              </div>
+              <h3 className="font-display mt-9 text-2xl text-[#0C1330]">
+                Vectorizar raster
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-[#4B5266]">
+                Convierte fotos, ilustraciones y capturas en SVGs editables
+                con menos nodos y más fidelidad.
+              </p>
+            </Link>
+            <Link
+              href="/background-remover"
+              className="block border border-[#DEDDD3] bg-[#FDFDFA] p-6 transition-colors hover:border-[#0C1330]"
+            >
+              <div className="flex items-start justify-between">
+                <span className="flex h-[52px] w-[52px] items-center justify-center bg-[#D8F646]">
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                    <rect
+                      x="6"
+                      y="9"
+                      width="15"
+                      height="9"
+                      transform="rotate(-30 6 9)"
+                      stroke="#0C1330"
+                      strokeWidth="2"
+                      fill="none"
+                    />
+                    <path d="M7 22h14" stroke="#0C1330" strokeWidth="2" />
+                  </svg>
+                </span>
+                <ArrowRight size={20} className="text-[#0C1330]" />
+              </div>
+              <h3 className="font-display mt-9 text-2xl text-[#0C1330]">
+                Quitar fondo
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-[#4B5266]">
+                Aísla el sujeto principal con bordes limpios y exporta
+                imágenes listas para componer.
+              </p>
+            </Link>
           </div>
         </section>
 
-        <section id="how-it-works" className="container py-24">
-          <div className="grid items-center gap-14 lg:grid-cols-[1fr_1.1fr]">
-            <div>
-              <div className="eyebrow">Cómo funciona</div>
-              <h2 className="mt-4 max-w-[460px] font-display text-4xl font-semibold leading-tight tracking-[-.05em] text-[#101A46]">
-                Un proceso visible de principio a fin.
-              </h2>
-              <p className="mt-5 max-w-[440px] leading-relaxed text-[#69728a]">
-                Cada paso queda claro: carga, ajusta, revisa y exporta. Sin
-                cajas negras ni controles escondidos.
-              </p>
-              <div className="mt-8 space-y-5">
-                {[
-                  ["01", "Carga tu fuente", "PNG, JPG o WEBP."],
-                  [
-                    "02",
-                    "Ajusta el trazado",
-                    "Ajusta detalle, suavizado y color.",
-                  ],
-                  [
-                    "03",
-                    "Exporta el resultado",
-                    "Descarga un asset limpio para tu próxima pantalla.",
-                  ],
-                ].map(([n, t, d]) => (
-                  <div className="flex gap-4" key={n}>
-                    <span className="font-display text-sm font-bold text-[#1687F8]">
-                      {n}
-                    </span>
-                    <div>
-                      <h3 className="font-bold text-[#101A46]">{t}</h3>
-                      <p className="mt-1 text-sm text-[#7a8299]">{d}</p>
+        <section
+          id="como-funciona"
+          className="grid items-center gap-14 border-b border-[#E3E2D9] px-6 py-16 sm:px-10 lg:grid-cols-[.85fr_1.15fr]"
+        >
+          <div>
+            <div className="eyebrow flex items-center gap-3">
+              <span className="h-[3px] w-8 bg-[#B9D62F]" /> Cómo funciona
+            </div>
+            <h2 className="font-display mt-6 max-w-[380px] text-4xl leading-tight text-[#0C1330] sm:text-5xl">
+              Un proceso visible de principio a fin
+              <span className="text-[#B9D62F]">.</span>
+            </h2>
+            <p className="mt-5 max-w-[420px] text-sm leading-relaxed text-[#4B5266]">
+              Cada paso queda claro: carga, ajusta, revisa y exporta. Sin
+              cajas negras ni controles escondidos.
+            </p>
+            <div className="mt-8 flex flex-col gap-5">
+              {STEPS.map(([n, t, d]) => (
+                <div className="flex gap-4" key={n}>
+                  <span className="font-technical flex h-fit min-w-[36px] items-center justify-center bg-[#D8F646] px-2 py-1.5 text-sm font-bold text-[#0C1330]">
+                    {n}
+                  </span>
+                  <div>
+                    <div className="text-[15px] font-bold text-[#0C1330]">
+                      {t}
+                    </div>
+                    <div className="mt-1.5 text-[13px] text-[#5A6076]">
+                      {d}
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-            <div className="relative overflow-hidden rounded-[2rem] border border-[#dfe2ea] bg-[#f4f4f0] p-4">
-              <img
-                src={sample}
-                alt="Ejemplo conceptual de transformación de píxeles a vector"
-                className="h-[300px] w-full rounded-2xl object-cover"
-              />
-              <div className="absolute left-9 top-9 rounded-full bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.15em] text-[#101A46] shadow-sm">
-                Antes → después
-              </div>
+          </div>
+          <div className="relative border border-[#DEDDD3] bg-white p-4">
+            <img
+              src={sample}
+              alt="Antes y después: píxeles convertidos en curvas"
+              className="block h-[300px] w-full object-contain sm:h-[430px]"
+            />
+            <div className="eyebrow absolute left-8 top-8 flex items-center gap-3 text-[#1652F5]">
+              Antes
+              <ArrowRight size={16} className="text-[#0C1330]" />
+              <span className="text-[#7F9313]">Después</span>
             </div>
           </div>
         </section>
 
-        <section className="container pb-24">
-          <div className="relative overflow-hidden rounded-[2rem] bg-[#101A46] px-7 py-12 text-white sm:px-12">
-            <div className="absolute -right-10 -top-24 h-72 w-72 rounded-full border-[32px] border-[#1687F8]/20" />
-            <div className="relative max-w-[560px]">
-              <div className="eyebrow text-[#5fdcf1]">
-                Listo cuando tú quieras
+        <section className="px-6 py-14 sm:px-10">
+          <div className="relative overflow-hidden bg-[#0C1330] px-7 py-14 sm:px-14">
+            <div className="pointer-events-none absolute -right-40 -top-28 h-[520px] w-[520px] rounded-full border-2 border-[#D8F646]/35" />
+            <div className="pointer-events-none absolute -right-10 top-14 h-[420px] w-[420px] rounded-full border-[14px] border-[#1652F5]/55" />
+            <div className="relative max-w-[600px]">
+              <div className="eyebrow flex items-center gap-3 text-[#D8F646]">
+                <span className="h-[3px] w-8 bg-[#D8F646]" /> Listo cuando tú
+                quieras
               </div>
-              <h2 className="mt-4 font-display text-4xl font-semibold tracking-[-.05em]">
-                Haz que tu próximo asset fluya.
+              <h2 className="font-display mt-6 text-4xl leading-tight text-white sm:text-5xl">
+                Haz que tu próximo asset fluya
+                <span className="text-[#D8F646]">.</span>
               </h2>
-              <p className="mt-4 max-w-[470px] leading-relaxed text-white/65">
+              <p className="mt-5 max-w-[480px] text-[15px] leading-relaxed text-white/70">
                 Empieza con una imagen. Sal con un resultado más limpio, más
                 ligero y listo para producción.
               </p>
               <Link
                 href="/workspace"
-                className="button-press mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3.5 text-sm font-bold text-[#101A46] hover:bg-[#e8f5ff]"
+                className="button-press mt-8 inline-flex items-center gap-3 bg-[#D8F646] px-7 py-5 text-base font-bold text-[#0C1330] hover:bg-[#C6E52E]"
               >
-                Abrir TraceFlow <ArrowRight size={16} />
+                Abrir TraceFlow <ArrowRight size={18} />
               </Link>
             </div>
           </div>
         </section>
       </main>
-    </TraceFlowShell>
+
+      <footer className="flex flex-col items-center justify-between gap-3 border-t border-[#E3E2D9] px-6 py-7 text-[13px] text-[#5A6076] sm:flex-row sm:px-10">
+        <div className="flex items-center gap-3">
+          <img src={mark} alt="" className="h-8 w-8 object-contain" />
+          <span>© 2026 TraceFlow</span>
+        </div>
+        <span>Raster in. Vector out.</span>
+      </footer>
+    </div>
   );
 }

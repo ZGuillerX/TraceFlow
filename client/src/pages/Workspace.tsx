@@ -1,14 +1,20 @@
-/* TraceFlow / Vector Atelier: workspace de vectorización con superficies de precisión, grid y anotaciones de trazado. */
+/* TraceFlow / Vector Atelier: Studio de vectorización con look de editor profesional. */
 import { useMemo, useRef, useState } from "react";
-import TraceFlowShell from "@/components/TraceFlowShell";
-import PreviewCanvas from "@/components/workspace/PreviewCanvas";
+import StudioTopBar from "@/components/studio/StudioTopBar";
+import InspectorPanel from "@/components/studio/InspectorPanel";
+import PreviewCanvas, { type StudioTool } from "@/components/workspace/PreviewCanvas";
 import SettingsPanel from "@/components/workspace/SettingsPanel";
 import { toast } from "sonner";
-import { vectorizeImageStream } from "@/lib/api";
+import {
+  removeBackgroundApi,
+  vectorizeImageStream,
+  type RemoveBgQuality,
+} from "@/lib/api";
 import { detectColors, recolorSvg } from "@/lib/recolor";
 
 export default function Workspace() {
   const input = useRef<HTMLInputElement>(null);
+  const [tool, setTool] = useState<StudioTool>("vectorize");
   const [file, setFile] = useState<File | null>(null);
   const [svg, setSvg] = useState<string | null>(null);
   const [bgHex, setBgHex] = useState<string | null>(null);
@@ -16,6 +22,9 @@ export default function Workspace() {
   const [colors, setColors] = useState(8);
   const [autoColors, setAutoColors] = useState(true);
   const [removeBg, setRemoveBg] = useState(false);
+  const [bgQuality, setBgQuality] = useState<RemoveBgQuality>("high");
+  const [removingBg, setRemovingBg] = useState(false);
+  const [removedBgUrl, setRemovedBgUrl] = useState<string | null>(null);
   const [colorOverrides, setColorOverrides] = useState<Record<string, string>>(
     {}
   );
@@ -24,15 +33,26 @@ export default function Workspace() {
   const [currentStage, setCurrentStage] = useState<string | null>(null);
   const abortController = useRef<AbortController | null>(null);
   const choose = () => input.current?.click();
+  const clearRemovedBg = () => {
+    if (removedBgUrl) URL.revokeObjectURL(removedBgUrl);
+    setRemovedBgUrl(null);
+  };
   const loadFile = (f: File | undefined) => {
     if (f) {
       setFile(f);
       setSvg(null);
+      clearRemovedBg();
       toast.success("Imagen cargada. Ajusta los parámetros para continuar.");
     }
   };
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) =>
     loadFile(e.target.files?.[0]);
+  const removeFile = () => {
+    setFile(null);
+    setSvg(null);
+    clearRemovedBg();
+    setColorOverrides({});
+  };
   const detectedColors = useMemo(
     () => (svg ? detectColors(svg, bgHex) : []),
     [svg, bgHex]
@@ -77,6 +97,33 @@ export default function Workspace() {
     }
   };
   const cancel = () => abortController.current?.abort();
+  const removeBackground = async () => {
+    if (!file) return toast.info("Carga una imagen primero.");
+    setRemovingBg(true);
+    try {
+      const blob = await removeBackgroundApi(file, bgQuality);
+      clearRemovedBg();
+      setRemovedBgUrl(URL.createObjectURL(blob));
+      toast.success("Fondo eliminado.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "No se pudo quitar el fondo. Intenta de nuevo."
+      );
+    } finally {
+      setRemovingBg(false);
+    }
+  };
+  const downloadRemovedBg = () => {
+    if (!removedBgUrl) return toast.info("Quita el fondo primero.");
+    const a = document.createElement("a");
+    a.href = removedBgUrl;
+    a.download =
+      (file?.name.replace(/\.[^.]+$/, "") || "traceflow") + "-sin-fondo.png";
+    a.click();
+    toast.success("Exportación PNG lista.");
+  };
   const download = () => {
     if (!displaySvg) return toast.info("Genera una preview para exportar.");
     const url = URL.createObjectURL(
@@ -93,40 +140,13 @@ export default function Workspace() {
     toast.success("Exportación SVG lista.");
   };
   return (
-    <TraceFlowShell workspace>
-      <div className="px-5 py-8 lg:px-10 lg:py-10">
-        <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <div className="eyebrow">01 / Motor vectorial</div>
-            <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-.05em] sm:text-4xl">
-              Vectorizar raster
-            </h1>
-            <p className="mt-2 max-w-[560px] text-sm text-[#69728a]">
-              Convierte una imagen en curvas limpias, editables y listas para
-              producción.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-[#7a8299]">
-            <span className="h-2 w-2 rounded-full bg-[#22C7E8]" /> Guardado
-            local activo
-          </div>
-        </div>
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
-          <PreviewCanvas
-            input={input}
-            file={file}
-            svg={svg}
-            displaySvg={displaySvg}
-            mode={mode}
-            setMode={setMode}
-            choose={choose}
-            onFile={onFile}
-            onDropFile={loadFile}
-            processing={processing}
-            currentStage={currentStage}
-            cancel={cancel}
-          />
+    <div className="flex h-screen flex-col overflow-hidden bg-[#FAF9F5] text-[#0C1330]">
+      <StudioTopBar />
+      <div className="grid flex-1 gap-5 overflow-hidden p-5 lg:grid-cols-[260px_minmax(0,1fr)_240px] lg:p-6">
+        <div className="flex flex-col gap-4 overflow-y-auto pr-1">
           <SettingsPanel
+            tool={tool}
+            setTool={setTool}
             detail={detail}
             setDetail={setDetail}
             autoColors={autoColors}
@@ -135,15 +155,45 @@ export default function Workspace() {
             setColors={setColors}
             removeBg={removeBg}
             setRemoveBg={setRemoveBg}
+            bgQuality={bgQuality}
+            setBgQuality={setBgQuality}
+          />
+        </div>
+        <div className="overflow-y-auto">
+          <PreviewCanvas
+            input={input}
+            tool={tool}
+            file={file}
+            svg={svg}
+            displaySvg={displaySvg}
+            mode={mode}
+            setMode={setMode}
+            choose={choose}
+            onFile={onFile}
+            onDropFile={loadFile}
+            onRemove={removeFile}
+            processing={processing}
+            currentStage={currentStage}
+            cancel={cancel}
+            removingBg={removingBg}
+            removedBgUrl={removedBgUrl}
             detectedColors={detectedColors}
             colorOverrides={colorOverrides}
             setColorOverride={setColorOverride}
-            processing={processing}
-            process={process}
-            download={download}
           />
         </div>
+        <InspectorPanel
+          tool={tool}
+          svg={svg}
+          download={download}
+          process={process}
+          processing={processing}
+          removedBgUrl={removedBgUrl}
+          downloadRemovedBg={downloadRemovedBg}
+          removeBackground={removeBackground}
+          removingBg={removingBg}
+        />
       </div>
-    </TraceFlowShell>
+    </div>
   );
 }
