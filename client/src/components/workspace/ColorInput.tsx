@@ -36,7 +36,7 @@ export default function ColorInput({ value, onChange, label }: ColorInputProps) 
         type="color"
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="h-9 w-11 cursor-pointer border border-[#cbd3df] bg-white p-1"
+        className="h-9 w-11 cursor-pointer border border-[#DEDDD3] bg-white p-1"
         aria-label={`Selector de color para ${label}`}
       />
       <input
@@ -51,7 +51,7 @@ export default function ColorInput({ value, onChange, label }: ColorInputProps) 
         }}
         placeholder="#RRGGBB"
         maxLength={7}
-        className="w-24 border border-[#cbd3df] bg-white px-2 py-1.5 text-xs font-bold uppercase text-[#101A46]"
+        className="w-24 border border-[#DEDDD3] bg-white px-2 py-1.5 text-xs font-bold uppercase text-[#0C1330]"
         aria-label={`Escribir codigo hex para ${label}`}
       />
     </div>

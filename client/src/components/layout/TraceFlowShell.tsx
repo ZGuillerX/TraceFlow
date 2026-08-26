@@ -29,8 +29,8 @@ export function Brand({ compact = false }: { compact?: boolean }) {
         }
       />
       {!compact && (
-        <span className="font-display text-[1.25rem] font-bold tracking-[-0.05em] text-[#101A46]">
-          Trace<span className="text-[#1687F8]">Flow</span>
+        <span className="font-display text-[1.25rem] font-bold tracking-[-0.05em] text-[#0C1330]">
+          Trace<span className="text-[#1652F5]">Flow</span>
         </span>
       )}
     </Link>
@@ -55,7 +55,7 @@ export default function TraceFlowShell({
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const sidebar = (
-    <aside className="flex h-full flex-col border-r border-[#dfe2ea] bg-[#f6f6f2] px-5 py-6">
+    <aside className="flex h-full flex-col border-r border-[#DEDDD3] bg-[#FAF9F5] px-5 py-6">
       <Brand />
       <div className="mt-12 mb-4 px-2 eyebrow">Estudio</div>
       <nav className="space-y-1" aria-label="Navegación principal">
@@ -66,12 +66,12 @@ export default function TraceFlowShell({
               key={href}
               href={href}
               onClick={() => setMobileOpen(false)}
-              className={`group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-all ${active ? "bg-[#101A46] text-white shadow-[0_8px_20px_rgba(16,26,70,.12)]" : "text-[#58627d] hover:bg-white hover:text-[#101A46]"}`}
+              className={`group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-all ${active ? "bg-[#0C1330] text-white shadow-[0_8px_20px_rgba(16,26,70,.12)]" : "text-[#7A8194] hover:bg-white hover:text-[#0C1330]"}`}
             >
               <Icon size={17} strokeWidth={active ? 2.2 : 1.8} />
               {label}
               {active && (
-                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#22C7E8]" />
+                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#D8F646]" />
               )}
             </Link>
           );
@@ -82,7 +82,7 @@ export default function TraceFlowShell({
 
   if (workspace)
     return (
-      <div className="min-h-screen bg-[#fbfbf8] text-[#101A46]">
+      <div className="min-h-screen bg-[#FAF9F5] text-[#0C1330]">
         <div className="flex min-h-screen">
           <div
             className={`fixed inset-y-0 left-0 z-40 w-[260px] transition-transform lg:static lg:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
@@ -91,30 +91,30 @@ export default function TraceFlowShell({
           </div>
           {mobileOpen && (
             <button
-              className="fixed inset-0 z-30 bg-[#101A46]/30 lg:hidden"
+              className="fixed inset-0 z-30 bg-[#0C1330]/30 lg:hidden"
               onClick={() => setMobileOpen(false)}
               aria-label="Cerrar menú"
             />
           )}
           <main className="min-w-0 flex-1">
-            <header className="flex h-[76px] items-center justify-between border-b border-[#e5e6eb] bg-[#fbfbf8]/90 px-5 backdrop-blur lg:px-10">
+            <header className="flex h-[76px] items-center justify-between border-b border-[#E3E2D9] bg-[#FAF9F5]/90 px-5 backdrop-blur lg:px-10">
               <button
                 onClick={() => setMobileOpen(true)}
-                className="rounded-lg p-2 text-[#58627d] hover:bg-[#f0f1f4] lg:hidden"
+                className="rounded-lg p-2 text-[#7A8194] hover:bg-[#F4F3ED] lg:hidden"
                 aria-label="Abrir menú"
               >
                 <Menu size={20} />
               </button>
-              <div className="hidden items-center gap-2 text-xs text-[#7a8299] lg:flex">
-                <span className="h-2 w-2 rounded-full bg-[#22C7E8]" /> Motor
-                listo <span className="text-[#d2d6de]">/</span> Espacio local
+              <div className="hidden items-center gap-2 text-xs text-[#7A8194] lg:flex">
+                <span className="h-2 w-2 rounded-full bg-[#D8F646]" /> Motor
+                listo <span className="text-[#D8D7CD]">/</span> Espacio local
               </div>
               <div className="ml-auto flex items-center gap-3">
                 <button
                   onClick={() =>
                     toast.info("Ajustes disponibles próximamente.")
                   }
-                  className="rounded-lg p-2 text-[#7a8299] hover:bg-[#f0f1f4]"
+                  className="rounded-lg p-2 text-[#7A8194] hover:bg-[#F4F3ED]"
                   aria-label="Ajustes"
                 >
                   <Settings2 size={18} />
@@ -123,12 +123,12 @@ export default function TraceFlowShell({
                   onClick={() =>
                     toast.info("El tema oscuro estará disponible próximamente.")
                   }
-                  className="rounded-lg p-2 text-[#7a8299] hover:bg-[#f0f1f4]"
+                  className="rounded-lg p-2 text-[#7A8194] hover:bg-[#F4F3ED]"
                   aria-label="Cambiar tema"
                 >
                   <Moon size={18} />
                 </button>
-                <div className="h-8 w-8 rounded-full bg-[#101A46] text-center text-xs font-bold leading-8 text-white">
+                <div className="h-8 w-8 rounded-full bg-[#0C1330] text-center text-xs font-bold leading-8 text-white">
                   TF
                 </div>
               </div>
@@ -140,26 +140,26 @@ export default function TraceFlowShell({
     );
 
   return (
-    <div className="min-h-screen bg-[#fbfbf8] text-[#101A46]">
+    <div className="min-h-screen bg-[#FAF9F5] text-[#0C1330]">
       <header className="container flex h-[88px] items-center justify-between">
         <Brand />
-        <nav className="hidden items-center gap-8 text-sm font-semibold text-[#626c86] md:flex">
+        <nav className="hidden items-center gap-8 text-sm font-semibold text-[#4B5266] md:flex">
           <a
             href="#how-it-works"
-            className="transition-colors hover:text-[#101A46]"
+            className="transition-colors hover:text-[#0C1330]"
           >
             Cómo funciona
           </a>
           <a
             href="#features"
-            className="transition-colors hover:text-[#101A46]"
+            className="transition-colors hover:text-[#0C1330]"
           >
             Capacidades
           </a>
           {/* Historial: pendiente de conectar a un backend real, oculto por ahora.
           <Link
             href="/history"
-            className="transition-colors hover:text-[#101A46]"
+            className="transition-colors hover:text-[#0C1330]"
           >
             Historial
           </Link>
@@ -168,14 +168,14 @@ export default function TraceFlowShell({
         <div className="flex items-center gap-3">
           <Link
             href="/workspace"
-            className="button-press inline-flex items-center gap-2 rounded-xl bg-[#101A46] px-4 py-2.5 text-sm font-bold text-white shadow-[0_8px_18px_rgba(16,26,70,.14)] hover:bg-[#18265e]"
+            className="button-press inline-flex items-center gap-2 rounded-xl bg-[#0C1330] px-4 py-2.5 text-sm font-bold text-white shadow-[0_8px_18px_rgba(16,26,70,.14)] hover:bg-[#18234f]"
           >
             Abrir estudio <ArrowUpRight size={15} />
           </Link>
         </div>
       </header>
       {children}
-      <footer className="container flex flex-col gap-3 border-t border-[#dfe2ea] py-8 text-xs text-[#7a8299] sm:flex-row sm:items-center sm:justify-between">
+      <footer className="container flex flex-col gap-3 border-t border-[#DEDDD3] py-8 text-xs text-[#7A8194] sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Brand compact />
           <span>© 2026 TraceFlow</span>

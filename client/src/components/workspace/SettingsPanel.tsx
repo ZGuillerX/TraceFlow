@@ -143,7 +143,6 @@ export default function SettingsPanel({
           <QualitySelector
             value={bgQuality}
             onChange={setBgQuality}
-            variant="studio"
             className="mt-3"
           />
         </>
