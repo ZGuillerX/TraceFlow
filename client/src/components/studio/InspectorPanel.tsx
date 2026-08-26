@@ -90,17 +90,18 @@ export default function InspectorPanel({
   };
 
   return (
-    <aside className="flex flex-col overflow-y-auto border-l border-[#E3E2D9] bg-[#FAF9F5] p-4">
-      <div className="font-technical mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[.15em] text-[#0C1330]">
-        <Layers2 size={14} /> Inspector
+    <aside className="flex flex-col border-t border-[#E3E2D9] bg-[#FAF9F5] p-4 lg:overflow-y-auto lg:border-l lg:border-t-0">
+      <div className="font-technical mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[.15em] text-[#0C1330]">
+        <Layers2 size={14} strokeWidth={2.5} /> Inspector
       </div>
+      <div className="mb-4 hairline" />
 
       {tool === "vectorize" ? (
         <>
-          <div className="font-technical mb-2 text-[10px] font-bold uppercase tracking-[.15em] text-[#9AA1B2]">
+          <div className="font-technical mb-2 text-[10px] font-black uppercase tracking-[.15em] text-[#9AA1B2]">
             Capas
           </div>
-          <div className="mb-5 space-y-1.5 text-sm">
+          <div className="mb-4 space-y-1.5 text-sm">
             {layers.map(({ label, count }) => (
               <div
                 key={label}
@@ -114,10 +115,12 @@ export default function InspectorPanel({
             ))}
           </div>
 
-          <div className="font-technical mb-2 text-[10px] font-bold uppercase tracking-[.15em] text-[#9AA1B2]">
+          <div className="my-4 hairline" />
+
+          <div className="font-technical mb-2 text-[10px] font-black uppercase tracking-[.15em] text-[#9AA1B2]">
             Propiedades
           </div>
-          <div className="font-technical mb-5 grid grid-cols-2 gap-y-2 text-[13px]">
+          <div className="font-technical mb-4 grid grid-cols-2 gap-y-2 text-[13px] font-bold">
             <span className="text-[#7A8194]">Ancho</span>
             <span className="text-right text-[#0C1330]">{width ?? "—"}</span>
             <span className="text-[#7A8194]">Alto</span>
@@ -128,24 +131,33 @@ export default function InspectorPanel({
             <span className="text-right text-[#0C1330]">{sizeLabel}</span>
           </div>
 
-          <div className="mb-2 flex items-center justify-between">
-            <span className="font-technical text-[10px] font-bold uppercase tracking-[.15em] text-[#9AA1B2]">
-              Código SVG
-            </span>
-            <button
-              onClick={copy}
-              disabled={!svg}
-              aria-label="Copiar código SVG"
-              className="text-[#7A8194] hover:text-[#0C1330] disabled:opacity-40"
-            >
-              {copied ? <Check size={14} /> : <Copy size={14} />}
-            </button>
+          <div className="my-4 hairline" />
+
+          <div className="border border-[#E3E2D9] bg-white">
+            <div className="flex items-center justify-between px-2.5 py-2">
+              <span className="font-technical text-[10px] font-black uppercase tracking-[.15em] text-[#9AA1B2]">
+                Código SVG
+              </span>
+              <button
+                onClick={copy}
+                disabled={!svg}
+                aria-label="Copiar código SVG"
+                className="text-[#7A8194] hover:text-[#0C1330] disabled:opacity-40"
+              >
+                {copied ? (
+                  <Check size={14} strokeWidth={2.5} />
+                ) : (
+                  <Copy size={14} strokeWidth={2.5} />
+                )}
+              </button>
+            </div>
+            <div className="hairline" />
+            <pre className="font-technical max-h-[180px] overflow-auto p-2.5 text-[11px] font-bold leading-relaxed text-[#5A6178]">
+              {svg
+                ? svg.slice(0, 800) + (svg.length > 800 ? "\n…" : "")
+                : "Genera una preview para ver el código."}
+            </pre>
           </div>
-          <pre className="font-technical max-h-[180px] overflow-auto border border-[#E3E2D9] bg-white p-2.5 text-[11px] leading-relaxed text-[#5A6178]">
-            {svg
-              ? svg.slice(0, 800) + (svg.length > 800 ? "\n…" : "")
-              : "Genera una preview para ver el código."}
-          </pre>
 
           {!svg && (
             <div className="mt-4 flex items-start gap-2 border border-[#E3E2D9] bg-white p-3 text-xs leading-relaxed text-[#7A8194]">
@@ -177,10 +189,10 @@ export default function InspectorPanel({
         </>
       ) : (
         <>
-          <div className="font-technical mb-2 text-[10px] font-bold uppercase tracking-[.15em] text-[#9AA1B2]">
+          <div className="font-technical mb-2 text-[10px] font-black uppercase tracking-[.15em] text-[#9AA1B2]">
             Propiedades
           </div>
-          <div className="font-technical mb-5 grid grid-cols-2 gap-y-2 text-[13px]">
+          <div className="font-technical mb-5 grid grid-cols-2 gap-y-2 text-[13px] font-bold">
             <span className="text-[#7A8194]">Ancho</span>
             <span className="text-right text-[#0C1330]">{pngDims?.w ?? "—"}</span>
             <span className="text-[#7A8194]">Alto</span>
@@ -194,8 +206,8 @@ export default function InspectorPanel({
           </div>
 
           {!removedBgUrl && (
-            <div className="flex items-start gap-2 border border-[#E3E2D9] bg-white p-3 text-xs leading-relaxed text-[#7A8194]">
-              <Info size={14} className="mt-0.5 shrink-0 text-[#1652F5]" />
+            <div className="flex items-start gap-2 border border-[#E3E2D9] bg-white p-3 text-xs font-bold leading-relaxed text-[#7A8194]">
+              <Info size={14} strokeWidth={2.5} className="mt-0.5 shrink-0 text-[#1652F5]" />
               Quita el fondo para ver las propiedades del resultado.
             </div>
           )}

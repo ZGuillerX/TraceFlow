@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
-import { Eraser, Info, Wand2 } from "lucide-react";
+import { Eraser, HelpCircle, Info, Wand2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import RangeSlider from "./RangeSlider";
 import type { RemoveBgQuality } from "@/lib/api";
 import type { StudioTool } from "./PreviewCanvas";
 
@@ -25,7 +26,8 @@ const SWITCH_STYLE = {
 };
 
 const HINTS: Record<string, string> = {
-  header: "Ajusta el detalle de trazado para equilibrar calidad y peso del archivo.",
+  header:
+    "Ajusta el detalle de trazado para equilibrar calidad y peso del archivo.",
   detail: "Más detalle conserva bordes pequeños y textura.",
   autoColors:
     "Analiza la imagen y elige cuántos colores usar. Apágalo para controlarlo tú mismo.",
@@ -110,30 +112,32 @@ export default function SettingsPanel({
     >
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <div className="font-technical eyebrow">Ajustes</div>
+          <div className="font-technical eyebrow font-black text-[#0C1330]">
+            Ajustes
+          </div>
           <h2 className="mt-1 font-display text-base">
             {tool === "vectorize" ? "Controles de trazado" : "Quitar fondo"}
           </h2>
         </div>
-        {tool === "vectorize" && (
-          <HintButton id="header" openHint={openHint} onToggle={onToggleHint} />
-        )}
       </div>
 
       {tool === "vectorize" ? (
         <>
           <div className="flex items-center gap-1.5 text-xs font-bold text-[#0C1330]">
             Nivel de detalle
-            <HintButton id="detail" openHint={openHint} onToggle={onToggleHint} />
+            <HintButton
+              id="detail"
+              openHint={openHint}
+              onToggle={onToggleHint}
+            />
             <span className="ml-auto text-[#0C1330]">{detail}%</span>
           </div>
-          <input
-            type="range"
-            min="10"
-            max="100"
+          <RangeSlider
+            min={10}
+            max={100}
             value={detail}
-            onChange={e => setDetail(Number(e.target.value))}
-            className="mt-3 w-full accent-[#0C1330]"
+            onChange={setDetail}
+            className="mt-3"
           />
           <label className="mt-4 block text-xs font-bold text-[#0C1330]">
             Suavizado de curvas{" "}
@@ -141,27 +145,23 @@ export default function SettingsPanel({
               {curveSmoothing}%
             </span>
           </label>
-          <input
-            type="range"
-            min="0"
-            max="100"
+          <RangeSlider
+            min={0}
+            max={100}
             value={curveSmoothing}
-            onChange={e => setCurveSmoothing(Number(e.target.value))}
-            className="mt-3 w-full accent-[#0C1330]"
+            onChange={setCurveSmoothing}
+            className="mt-3"
           />
           <label className="mt-3 block text-xs font-bold text-[#0C1330]">
             Umbral de colores{" "}
-            <span className="float-right text-[#0C1330]">
-              {colorThreshold}
-            </span>
+            <span className="float-right text-[#0C1330]">{colorThreshold}</span>
           </label>
-          <input
-            type="range"
-            min="0"
-            max="100"
+          <RangeSlider
+            min={0}
+            max={100}
             value={colorThreshold}
-            onChange={e => setColorThreshold(Number(e.target.value))}
-            className="mt-3 w-full accent-[#0C1330]"
+            onChange={setColorThreshold}
+            className="mt-3"
           />
           <div className="my-4 hairline" />
           <div className="flex items-center justify-between gap-3">
@@ -170,10 +170,14 @@ export default function SettingsPanel({
                 htmlFor="auto-colors"
                 className="flex items-center gap-2 text-xs font-bold text-[#0C1330]"
               >
-                <Wand2 size={15} className="text-[#1652F5]" /> Detectar
-                colores automáticamente
+                <Wand2 size={15} className="text-[#1652F5]" /> Detectar colores
+                automáticamente
               </label>
-              <HintButton id="autoColors" openHint={openHint} onToggle={onToggleHint} />
+              <HintButton
+                id="autoColors"
+                openHint={openHint}
+                onToggle={onToggleHint}
+              />
             </div>
             <Switch
               id="auto-colors"
@@ -192,14 +196,13 @@ export default function SettingsPanel({
               {colors}
             </span>
           </label>
-          <input
-            type="range"
-            min="2"
-            max="50"
+          <RangeSlider
+            min={2}
+            max={50}
             value={colors}
             disabled={autoColors}
-            onChange={e => setColors(Number(e.target.value))}
-            className="mt-3 w-full accent-[#0C1330] disabled:opacity-40"
+            onChange={setColors}
+            className="mt-3"
           />
           <div className="my-4 hairline" />
           <div className="flex items-center justify-between gap-3">
@@ -211,7 +214,11 @@ export default function SettingsPanel({
                 <Eraser size={15} className="text-[#1652F5]" /> Quitar fondo
                 antes de vectorizar
               </label>
-              <HintButton id="removeBg" openHint={openHint} onToggle={onToggleHint} />
+              <HintButton
+                id="removeBg"
+                openHint={openHint}
+                onToggle={onToggleHint}
+              />
             </div>
             <Switch
               id="remove-bg"
@@ -220,12 +227,27 @@ export default function SettingsPanel({
               {...SWITCH_STYLE}
             />
           </div>
+          <div className="mt-4 flex items-start gap-2.5 border border-[#E3E2D9] bg-white p-3">
+            <HelpCircle size={16} className="mt-0.5 shrink-0 text-[#9AA1B2]" />
+            <div>
+              <div className="font-technical text-[9px] font-bold uppercase tracking-[.15em] text-[#9AA1B2]">
+                Consejo
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-[#7A8194]">
+                {HINTS.header}
+              </p>
+            </div>
+          </div>
         </>
       ) : (
         <>
           <div className="flex items-center gap-1.5 text-xs font-bold text-[#0C1330]">
             Calidad
-            <HintButton id="quality" openHint={openHint} onToggle={onToggleHint} />
+            <HintButton
+              id="quality"
+              openHint={openHint}
+              onToggle={onToggleHint}
+            />
           </div>
           <div className="mt-3 flex border border-[#DEDDD3] bg-white p-1">
             <button

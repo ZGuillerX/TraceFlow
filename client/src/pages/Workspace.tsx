@@ -2,7 +2,9 @@
 import { useMemo, useRef, useState } from "react";
 import StudioTopBar from "@/components/studio/StudioTopBar";
 import InspectorPanel from "@/components/studio/InspectorPanel";
-import PreviewCanvas, { type StudioTool } from "@/components/workspace/PreviewCanvas";
+import PreviewCanvas, {
+  type StudioTool,
+} from "@/components/workspace/PreviewCanvas";
 import SettingsPanel from "@/components/workspace/SettingsPanel";
 import { toast } from "sonner";
 import {
@@ -58,8 +60,7 @@ export default function Workspace() {
     [svg, bgHex]
   );
   const displaySvg = useMemo(
-    () =>
-      svg ? recolorSvg(svg, detectedColors, colorOverrides, bgHex) : svg,
+    () => (svg ? recolorSvg(svg, detectedColors, colorOverrides, bgHex) : svg),
     [svg, detectedColors, colorOverrides, bgHex]
   );
   const setColorOverride = (id: string, hex: string) =>
@@ -140,10 +141,10 @@ export default function Workspace() {
     toast.success("Exportación SVG lista.");
   };
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#FAF9F5] text-[#0C1330]">
+    <div className="flex min-h-screen flex-col bg-[#FAF9F5] text-[#0C1330] lg:h-screen lg:overflow-hidden">
       <StudioTopBar />
-      <div className="grid flex-1 gap-5 overflow-hidden p-5 lg:grid-cols-[260px_minmax(0,1fr)_240px] lg:p-6">
-        <div className="flex flex-col gap-4 overflow-y-auto pr-1">
+      <div className="grid flex-1 gap-4 p-4 sm:gap-5 sm:p-5 lg:grid-cols-[300px_minmax(0,1fr)_280px] lg:overflow-hidden lg:p-6">
+        <div className="flex flex-col gap-4 lg:overflow-y-auto lg:pr-1">
           <SettingsPanel
             tool={tool}
             setTool={setTool}
@@ -159,7 +160,7 @@ export default function Workspace() {
             setBgQuality={setBgQuality}
           />
         </div>
-        <div className="overflow-y-auto">
+        <div className="lg:overflow-y-auto">
           <PreviewCanvas
             input={input}
             tool={tool}

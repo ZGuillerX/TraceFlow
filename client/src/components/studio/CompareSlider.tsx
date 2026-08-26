@@ -57,7 +57,7 @@ export default function CompareSlider({
   return (
     <div
       ref={containerRef}
-      className={`relative h-[380px] w-full max-w-[480px] select-none overflow-hidden border border-[#DEDDD3] shadow-[0_15px_35px_rgba(12,19,48,.1)] ${checkerboard ? "checkerboard" : "bg-white"}`}
+      className={`relative h-[260px] w-full max-w-[480px] select-none overflow-hidden border border-[#DEDDD3] shadow-[0_15px_35px_rgba(12,19,48,.1)] sm:h-[380px] ${checkerboard ? "checkerboard" : "bg-white"}`}
     >
       <div className="font-technical absolute left-4 top-4 z-10 bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.15em] text-[#0C1330] shadow-sm">
         Original

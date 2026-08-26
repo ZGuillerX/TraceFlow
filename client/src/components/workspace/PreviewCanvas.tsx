@@ -1,5 +1,6 @@
 import { useEffect, useState, type DragEvent, type RefObject } from "react";
 import {
+  ChevronDown,
   Hand,
   ImagePlus,
   Maximize,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import CompareSlider from "@/components/studio/CompareSlider";
 import ColorInput from "./ColorInput";
+import RangeSlider from "./RangeSlider";
 import type { DetectedColor } from "@/lib/recolor";
 
 export type StudioTool = "vectorize" | "remove-bg";
@@ -98,6 +100,10 @@ export default function PreviewCanvas({
   const [isDragging, setIsDragging] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+  // decorativos: la herramienta activa y el zoom se muestran y se
+  // mueven, pero el lienzo no tiene pan/zoom real todavia.
+  const [zoomTool, setZoomTool] = useState<"hand" | "fit">("hand");
+  const [zoom, setZoom] = useState(50);
 
   useEffect(() => {
     if (!file) {
@@ -187,10 +193,10 @@ export default function PreviewCanvas({
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
-        className={`paper-grid relative flex min-h-[430px] items-center justify-center overflow-hidden border border-dashed transition-colors ${isDragging ? "border-[#1652F5] bg-[#eef3ff]" : "border-[#CBCAC0] bg-[#F4F3EE]"}`}
+        className={`paper-grid relative flex min-h-[300px] items-center justify-center overflow-hidden border border-dashed p-4 transition-colors sm:min-h-[430px] ${isDragging ? "border-[#1652F5] bg-[#eef3ff]" : "border-[#CBCAC0] bg-[#F4F3EE]"}`}
       >
         {processing ? (
-          <div className="flex h-[380px] w-full max-w-[480px] flex-col items-center justify-center gap-4 border border-[#DEDDD3] bg-white p-6 shadow-[0_15px_35px_rgba(12,19,48,.1)]">
+          <div className="flex h-[260px] w-full max-w-[480px] sm:h-[380px] flex-col items-center justify-center gap-4 border border-[#DEDDD3] bg-white p-6 shadow-[0_15px_35px_rgba(12,19,48,.1)]">
             <div className="font-display text-3xl tabular-nums text-[#0C1330]">
               {progress}%
             </div>
@@ -211,7 +217,7 @@ export default function PreviewCanvas({
             </button>
           </div>
         ) : removingBg ? (
-          <div className="flex h-[380px] w-full max-w-[480px] flex-col items-center justify-center gap-4 border border-[#DEDDD3] bg-white p-6 shadow-[0_15px_35px_rgba(12,19,48,.1)]">
+          <div className="flex h-[260px] w-full max-w-[480px] sm:h-[380px] flex-col items-center justify-center gap-4 border border-[#DEDDD3] bg-white p-6 shadow-[0_15px_35px_rgba(12,19,48,.1)]">
             <RefreshCw size={28} className="animate-spin text-[#1652F5]" />
             <span className="text-[11px] font-bold uppercase tracking-[.15em] text-[#7A8194]">
               Quitando fondo…
@@ -241,7 +247,7 @@ export default function PreviewCanvas({
             />
           </CompareSlider>
         ) : file && previewUrl ? (
-          <div className="checkerboard relative flex h-[380px] w-full max-w-[480px] items-center justify-center overflow-hidden border border-[#DEDDD3] shadow-[0_15px_35px_rgba(12,19,48,.1)]">
+          <div className="checkerboard relative flex h-[260px] w-full max-w-[480px] sm:h-[380px] items-center justify-center overflow-hidden border border-[#DEDDD3] shadow-[0_15px_35px_rgba(12,19,48,.1)]">
             <div className="font-technical absolute left-4 top-4 z-10 bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.15em] text-[#0C1330] shadow-sm">
               Vista previa
             </div>
@@ -276,76 +282,88 @@ export default function PreviewCanvas({
           className="hidden"
         />
       </div>
-      <div className="font-technical mt-3 flex items-center justify-between border border-[#DEDDD3] bg-[#FBFBF7] px-3 py-2 text-[11px] text-[#7A8194]">
+      <div className="font-technical mt-3 flex flex-wrap items-center justify-between gap-2 border border-[#DEDDD3] bg-[#FBFBF7] px-3 py-2 text-[11px] text-[#7A8194]">
         <div className="flex items-center gap-3">
-          <span>100%</span>
-          <button aria-label="Herramienta mano" className="hover:text-[#0C1330]">
+          <span className="flex items-center gap-1 text-[#0C1330]">
+            100% <ChevronDown size={12} />
+          </span>
+          <button
+            onClick={() => setZoomTool("hand")}
+            aria-label="Herramienta mano"
+            aria-pressed={zoomTool === "hand"}
+            className={`flex h-7 w-7 items-center justify-center border ${zoomTool === "hand" ? "border-[#0C1330] bg-[#0C1330] text-white" : "border-[#DEDDD3] bg-white text-[#0C1330] hover:border-[#0C1330]"}`}
+          >
             <Hand size={14} />
           </button>
           <button
-            aria-label="Pantalla completa"
-            className="hover:text-[#0C1330]"
+            onClick={() => setZoomTool("fit")}
+            aria-label="Ajustar a pantalla"
+            aria-pressed={zoomTool === "fit"}
+            className={`flex h-7 w-7 items-center justify-center border ${zoomTool === "fit" ? "border-[#0C1330] bg-[#0C1330] text-white" : "border-[#DEDDD3] bg-white text-[#0C1330] hover:border-[#0C1330]"}`}
           >
             <Maximize size={14} />
           </button>
         </div>
-        <input
-          type="range"
-          disabled
-          defaultValue={50}
-          className="w-32 accent-[#1652F5] opacity-60"
+        <RangeSlider
+          min={0}
+          max={100}
+          value={zoom}
+          onChange={setZoom}
+          className="w-32"
         />
       </div>
 
       {tool === "vectorize" && (
-      <div className="mt-5">
-        <div className="flex items-center gap-2 text-xs font-bold text-[#0C1330]">
-          <Palette size={14} className="text-[#1652F5]" /> Colores detectados
-        </div>
-        {detectedColors.length === 0 ? (
-          <p className="mt-2 text-[11px] text-[#9AA1B2]">
-            Genera una preview para ver los colores del trazo.
-          </p>
-        ) : (
-          <>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {visibleSwatches.map(color => (
-                <span
-                  key={color.id}
-                  title={colorOverrides[color.id] ?? `#${color.hex}`}
-                  className="h-6 w-6 shrink-0 rounded-full border border-[#DEDDD3]"
-                  style={{
-                    backgroundColor:
-                      colorOverrides[color.id] ?? `#${color.hex}`,
-                  }}
-                />
-              ))}
-              {remainingCount > 0 && (
-                <span className="flex h-6 shrink-0 items-center justify-center rounded-full border border-[#C8E93F] bg-[#F2F9DA] px-2 text-[10px] font-bold text-[#5F7A0C]">
-                  +{remainingCount}
-                </span>
-              )}
-            </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-[#7A8194]">
-              Cambia cualquier color conservando su sombreado. Cada selector
-              empieza en el color que ya tiene la imagen.
+        <div className="mt-5">
+          <div className="flex items-center gap-2 text-xs font-bold text-[#0C1330]">
+            <Palette size={14} className="text-[#1652F5]" /> Colores detectados
+          </div>
+          {detectedColors.length === 0 ? (
+            <p className="mt-2 text-[11px] text-[#9AA1B2]">
+              Genera una preview para ver los colores del trazo.
             </p>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              {detectedColors.map(color => {
-                const current = colorOverrides[color.id] ?? `#${color.hex}`;
-                return (
-                  <ColorInput
-                    key={color.id}
-                    value={current}
-                    onChange={hex => setColorOverride(color.id, hex)}
-                    label={current}
-                  />
-                );
-              })}
-            </div>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {visibleSwatches.map(color => (
+                    <span
+                      key={color.id}
+                      title={colorOverrides[color.id] ?? `#${color.hex}`}
+                      className="h-6 w-6 shrink-0 rounded-full border border-[#DEDDD3]"
+                      style={{
+                        backgroundColor:
+                          colorOverrides[color.id] ?? `#${color.hex}`,
+                      }}
+                    />
+                  ))}
+                  {remainingCount > 0 && (
+                    <span className="flex h-6 shrink-0 items-center justify-center rounded-full border border-[#C8E93F] bg-[#F2F9DA] px-2 text-[10px] font-bold text-[#5F7A0C]">
+                      +{remainingCount}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] leading-relaxed text-[#7A8194]">
+                  Cambia cualquier color conservando su sombreado. Cada
+                  selector empieza en el color que ya tiene la imagen.
+                </p>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {detectedColors.map(color => {
+                  const current = colorOverrides[color.id] ?? `#${color.hex}`;
+                  return (
+                    <ColorInput
+                      key={color.id}
+                      value={current}
+                      onChange={hex => setColorOverride(color.id, hex)}
+                      label={current}
+                    />
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
       )}
     </section>
   );

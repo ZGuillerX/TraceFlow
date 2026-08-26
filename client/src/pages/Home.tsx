@@ -54,9 +54,8 @@ export default function Home() {
               <span className="text-[#D8F646]">.</span>
             </h1>
             <p className="mt-7 max-w-[480px] text-[17px] leading-relaxed text-[#4B5266]">
-              Convierte imágenes raster en SVGs limpios y elimina fondos con
-              un flujo rápido, preciso y pensado para resultados
-              profesionales.
+              Convierte imágenes raster en SVGs limpios y elimina fondos con un
+              flujo rápido, preciso y pensado para resultados profesionales.
             </p>
             <div className="mt-9 flex flex-col gap-4 sm:flex-row">
               <Link
@@ -74,18 +73,17 @@ export default function Home() {
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-[#4B5266]">
               <span className="flex items-center gap-2.5">
-                <Check size={14} className="text-[#8FB811]" /> Salida lista
-                para SVG
+                <Check size={14} className="text-[#8FB811]" /> Salida lista para
+                SVG
               </span>
               <span className="h-4 w-px bg-[#D8D7CD]" />
               <span className="flex items-center gap-2.5">
-                <Check size={14} className="text-[#8FB811]" /> PNG
-                transparente
+                <Check size={14} className="text-[#8FB811]" /> PNG transparente
               </span>
               <span className="h-4 w-px bg-[#D8D7CD]" />
               <span className="flex items-center gap-2.5">
-                <Check size={14} className="text-[#8FB811]" /> Sin
-                conocimientos avanzados
+                <Check size={14} className="text-[#8FB811]" /> Sin conocimientos
+                avanzados
               </span>
             </div>
           </div>
@@ -158,8 +156,8 @@ export default function Home() {
                 Vectorizar raster
               </h3>
               <p className="mt-3 text-sm leading-relaxed text-[#4B5266]">
-                Convierte fotos, ilustraciones y capturas en SVGs editables
-                con menos nodos y más fidelidad.
+                Convierte fotos, ilustraciones y capturas en SVGs editables con
+                menos nodos y más fidelidad.
               </p>
             </Link>
             <Link
@@ -188,8 +186,8 @@ export default function Home() {
                 Quitar fondo
               </h3>
               <p className="mt-3 text-sm leading-relaxed text-[#4B5266]">
-                Aísla el sujeto principal con bordes limpios y exporta
-                imágenes listas para componer.
+                Aísla el sujeto principal con bordes limpios y exporta imágenes
+                listas para componer.
               </p>
             </Link>
           </div>
@@ -208,8 +206,8 @@ export default function Home() {
               <span className="text-[#B9D62F]">.</span>
             </h2>
             <p className="mt-5 max-w-[420px] text-sm leading-relaxed text-[#4B5266]">
-              Cada paso queda claro: carga, ajusta, revisa y exporta. Sin
-              cajas negras ni controles escondidos.
+              Cada paso queda claro: carga, ajusta, revisa y exporta. Sin cajas
+              negras ni controles escondidos.
             </p>
             <div className="mt-8 flex flex-col gap-5">
               {STEPS.map(([n, t, d]) => (
@@ -221,9 +219,7 @@ export default function Home() {
                     <div className="text-[15px] font-bold text-[#0C1330]">
                       {t}
                     </div>
-                    <div className="mt-1.5 text-[13px] text-[#5A6076]">
-                      {d}
-                    </div>
+                    <div className="mt-1.5 text-[13px] text-[#5A6076]">{d}</div>
                   </div>
                 </div>
               ))}
