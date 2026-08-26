@@ -83,7 +83,7 @@ export default function InspectorPanel({
   };
 
   return (
-    <aside className="flex flex-col border-t border-[#E3E2D9] bg-[#FAF9F5] p-4 lg:overflow-y-auto lg:border-l lg:border-t-0">
+    <aside className="flex min-w-0 flex-col border-t border-[#E3E2D9] bg-[#FAF9F5] p-4 lg:overflow-y-auto lg:border-l lg:border-t-0">
       <div className="font-technical mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[.15em] text-[#0C1330]">
         <Layers2 size={14} strokeWidth={2.5} /> Inspector
       </div>
@@ -126,7 +126,7 @@ export default function InspectorPanel({
 
           <div className="my-4 hairline" />
 
-          <div className="border border-[#E3E2D9] bg-white">
+          <div className="min-w-0 border border-[#E3E2D9] bg-white">
             <div className="flex items-center justify-between px-2.5 py-2">
               <span className="font-technical text-[10px] font-black uppercase tracking-[.15em] text-[#9AA1B2]">
                 Código SVG
@@ -145,7 +145,7 @@ export default function InspectorPanel({
               </button>
             </div>
             <div className="hairline" />
-            <pre className="font-technical max-h-[180px] overflow-auto p-2.5 text-[11px] font-bold leading-relaxed text-[#5A6178]">
+            <pre className="font-technical max-h-[180px] overflow-auto whitespace-pre-wrap break-all p-2.5 text-[11px] font-bold leading-relaxed text-[#5A6178]">
               {svg
                 ? svg.slice(0, 800) + (svg.length > 800 ? "\n…" : "")
                 : "Genera una preview para ver el código."}
@@ -187,9 +187,13 @@ export default function InspectorPanel({
           </div>
           <div className="font-technical mb-5 grid grid-cols-2 gap-y-2 text-[13px] font-bold">
             <span className="text-[#7A8194]">Ancho</span>
-            <span className="text-right text-[#0C1330]">{pngDims?.w ?? "—"}</span>
+            <span className="text-right text-[#0C1330]">
+              {pngDims?.w ?? "—"}
+            </span>
             <span className="text-[#7A8194]">Alto</span>
-            <span className="text-right text-[#0C1330]">{pngDims?.h ?? "—"}</span>
+            <span className="text-right text-[#0C1330]">
+              {pngDims?.h ?? "—"}
+            </span>
             <span className="text-[#7A8194]">Formato</span>
             <span className="text-right text-[#0C1330]">
               {removedBgUrl ? "PNG" : "—"}
@@ -202,7 +206,11 @@ export default function InspectorPanel({
 
           {!removedBgUrl && (
             <div className="flex items-start gap-2 border border-[#E3E2D9] bg-white p-3 text-xs font-bold leading-relaxed text-[#7A8194]">
-              <Info size={14} strokeWidth={2.5} className="mt-0.5 shrink-0 text-[#1652F5]" />
+              <Info
+                size={14}
+                strokeWidth={2.5}
+                className="mt-0.5 shrink-0 text-[#1652F5]"
+              />
               Quita el fondo para ver las propiedades del resultado.
             </div>
           )}

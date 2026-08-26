@@ -147,7 +147,7 @@ export default function PreviewCanvas({
   // que desplazar). Mueve el scroll del contenedor directamente en vez
   // de un transform propio, para heredar gratis los limites naturales
   // del scroll (no se puede arrastrar mas alla del contenido).
-  const onCanvasPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const onCanvasPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (canvasTool !== "hand" || !canvasRef.current) return;
     panState.current = {
       startX: e.clientX,
@@ -155,7 +155,7 @@ export default function PreviewCanvas({
       offsetX: panOffset.x,
       offsetY: panOffset.y,
     };
-    canvasRef.current.setPointerCapture(e.pointerId);
+    canvasRef.current.setPointerCapture?.(e.pointerId);
   };
   const onCanvasPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (!panState.current) return;

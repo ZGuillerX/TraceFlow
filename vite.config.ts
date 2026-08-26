@@ -24,6 +24,7 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    allowedHosts: true
   },
   test: {
     environment: "jsdom",
