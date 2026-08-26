@@ -91,6 +91,7 @@ Abre **http://localhost:5173** — el proxy de Vite reenvía las peticiones a `/
 | --- | --- |
 | `pnpm dev` | Arranca el frontend en modo desarrollo con recarga en caliente. |
 | `pnpm check` | Verifica tipos de TypeScript sin emitir archivos (`tsc --noEmit`). |
+| `pnpm test` | Corre la suite de tests del frontend con Vitest. |
 | `pnpm format` | Formatea el proyecto con Prettier. |
 | `pnpm build` | Compila el frontend de producción a `dist/`. |
 | `pnpm preview` | Sirve el build de `dist/` localmente, para probarlo antes de desplegar. |

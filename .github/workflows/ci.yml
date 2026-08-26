@@ -21,6 +21,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Chequeo de tipos
         run: pnpm check
+      - name: Tests
+        run: pnpm test
       - name: Build
         run: pnpm build
 
