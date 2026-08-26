@@ -9,8 +9,8 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import TraceFlowShell from "@/components/TraceFlowShell";
-import ZoomLightbox from "@/components/ZoomLightbox";
+import TraceFlowShell from "@/components/layout/TraceFlowShell";
+import ZoomLightbox from "@/components/layout/ZoomLightbox";
 import { toast } from "sonner";
 import sample from "@/assets/sample-transform.webp";
 import { removeBackgroundApi, type RemoveBgQuality } from "@/lib/api";

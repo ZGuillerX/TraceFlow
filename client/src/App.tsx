@@ -7,8 +7,7 @@ import History from "@/pages/History";
 import Home from "@/pages/Home";
 import Workspace from "@/pages/Workspace";
 import { Route, Switch } from "wouter";
-import ErrorBoundary from "./components/ErrorBoundary";
-import { ThemeProvider } from "./contexts/ThemeContext";
+import ErrorBoundary from "./components/layout/ErrorBoundary";
 
 function Router() {
   return (
@@ -26,12 +25,10 @@ function Router() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Router />
+      </TooltipProvider>
     </ErrorBoundary>
   );
 }

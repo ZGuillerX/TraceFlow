@@ -1,7 +1,7 @@
 /* TraceFlow / Vector Atelier: archivo de trabajos con estado vacío técnico, píxeles y curva Bézier como señal de producto. */
 import { ArrowRight, Clock3, Filter, FolderOpen, Search } from "lucide-react";
 import { Link } from "wouter";
-import TraceFlowShell from "@/components/TraceFlowShell";
+import TraceFlowShell from "@/components/layout/TraceFlowShell";
 import { toast } from "sonner";
 
 export default function History() {
