@@ -103,6 +103,9 @@ export default function CompareSlider({
 
       <div
         onPointerDown={e => {
+          // evita que el pan del lienzo (herramienta "mano") capture
+          // este mismo arrastre por burbujeo del evento.
+          e.stopPropagation();
           dragging.current = true;
           updateFromClientX(e.clientX);
         }}

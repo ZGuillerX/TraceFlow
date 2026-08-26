@@ -198,7 +198,9 @@ export default function InspectorPanel({
             <span className="text-[#7A8194]">Alto</span>
             <span className="text-right text-[#0C1330]">{pngDims?.h ?? "—"}</span>
             <span className="text-[#7A8194]">Formato</span>
-            <span className="text-right text-[#0C1330]">PNG</span>
+            <span className="text-right text-[#0C1330]">
+              {removedBgUrl ? "PNG" : "—"}
+            </span>
             <span className="text-[#7A8194]">Tamaño</span>
             <span className="text-right text-[#0C1330]">
               {pngSize !== null ? formatBytes(pngSize) : "—"}

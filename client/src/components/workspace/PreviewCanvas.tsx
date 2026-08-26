@@ -1,4 +1,11 @@
-import { useEffect, useState, type DragEvent, type RefObject } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type DragEvent,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
+} from "react";
 import {
   ChevronDown,
   Hand,
@@ -100,10 +107,55 @@ export default function PreviewCanvas({
   const [isDragging, setIsDragging] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
-  // decorativos: la herramienta activa y el zoom se muestran y se
-  // mueven, pero el lienzo no tiene pan/zoom real todavia.
   const [zoomTool, setZoomTool] = useState<"hand" | "fit">("hand");
-  const [zoom, setZoom] = useState(50);
+  const [zoom, setZoom] = useState(100);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const panState = useRef<{
+    startX: number;
+    startY: number;
+    scrollLeft: number;
+    scrollTop: number;
+  } | null>(null);
+
+  // ajustar a pantalla: vuelve a 100% y recentra el scroll -- con
+  // object-contain el contenido ya encaja completo al 100%, asi que
+  // "ajustar" equivale a deshacer cualquier zoom/pan manual.
+  const fitToScreen = () => {
+    setZoom(100);
+    const el = canvasRef.current;
+    if (el) {
+      requestAnimationFrame(() => {
+        el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+        el.scrollTop = (el.scrollHeight - el.clientHeight) / 2;
+      });
+    }
+  };
+
+  // pan con arrastre: solo activo con la herramienta "mano" y zoom >
+  // 100% (por debajo de eso el contenido no se desborda, no hay nada
+  // que desplazar). Mueve el scroll del contenedor directamente en vez
+  // de un transform propio, para heredar gratis los limites naturales
+  // del scroll (no se puede arrastrar mas alla del contenido).
+  const onCanvasPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (zoomTool !== "hand" || zoom <= 100 || !canvasRef.current) return;
+    panState.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      scrollLeft: canvasRef.current.scrollLeft,
+      scrollTop: canvasRef.current.scrollTop,
+    };
+    canvasRef.current.setPointerCapture(e.pointerId);
+  };
+  const onCanvasPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!panState.current || !canvasRef.current) return;
+    canvasRef.current.scrollLeft =
+      panState.current.scrollLeft - (e.clientX - panState.current.startX);
+    canvasRef.current.scrollTop =
+      panState.current.scrollTop - (e.clientY - panState.current.startY);
+  };
+  const onCanvasPointerUp = () => {
+    panState.current = null;
+  };
 
   useEffect(() => {
     if (!file) {
@@ -190,10 +242,15 @@ export default function PreviewCanvas({
         )}
       </div>
       <div
+        ref={canvasRef}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
-        className={`paper-grid relative flex min-h-[300px] items-center justify-center overflow-hidden border border-dashed p-4 transition-colors sm:min-h-[430px] ${isDragging ? "border-[#1652F5] bg-[#eef3ff]" : "border-[#CBCAC0] bg-[#F4F3EE]"}`}
+        onPointerDown={onCanvasPointerDown}
+        onPointerMove={onCanvasPointerMove}
+        onPointerUp={onCanvasPointerUp}
+        onPointerLeave={onCanvasPointerUp}
+        className={`paper-grid relative flex min-h-[300px] items-center justify-center overflow-auto border border-dashed p-4 transition-colors sm:min-h-[430px] ${isDragging ? "border-[#1652F5] bg-[#eef3ff]" : "border-[#CBCAC0] bg-[#F4F3EE]"} ${zoomTool === "hand" && zoom > 100 ? "cursor-grab active:cursor-grabbing" : ""}`}
       >
         {processing ? (
           <div className="flex h-[260px] w-full max-w-[480px] sm:h-[380px] flex-col items-center justify-center gap-4 border border-[#DEDDD3] bg-white p-6 shadow-[0_15px_35px_rgba(12,19,48,.1)]">
@@ -223,53 +280,65 @@ export default function PreviewCanvas({
               Quitando fondo…
             </span>
           </div>
-        ) : tool === "vectorize" && svg && displaySvg && file ? (
-          <CompareSlider
-            file={file}
-            rightLabel="SVG (Vista previa)"
-            rightBadge="Vector"
-            checkerboard={mode !== "paths"}
-            onClose={onRemove}
+        ) : (tool === "vectorize" && svg && displaySvg && file) ||
+          (tool === "remove-bg" && removedBgUrl && file) ||
+          (file && previewUrl) ? (
+          <div
+            style={{ transform: `scale(${zoom / 100})` }}
+            className="shrink-0 transition-transform"
           >
-            <div
-              className="h-full w-full p-6 [&_svg]:h-full [&_svg]:w-full [&_svg]:object-contain"
-              dangerouslySetInnerHTML={{ __html: displaySvg }}
-            />
-            {mode === "paths" && (
-              <div className="pointer-events-none absolute inset-0 border-2 border-[#1652F5]/40" />
+            {tool === "vectorize" && svg && displaySvg && file ? (
+              <CompareSlider
+                file={file}
+                rightLabel="SVG (Vista previa)"
+                rightBadge="Vector"
+                checkerboard={mode !== "paths"}
+                onClose={onRemove}
+              >
+                <div
+                  className="h-full w-full p-6 [&_svg]:h-full [&_svg]:w-full [&_svg]:object-contain"
+                  dangerouslySetInnerHTML={{ __html: displaySvg }}
+                />
+                {mode === "paths" && (
+                  <div className="pointer-events-none absolute inset-0 border-2 border-[#1652F5]/40" />
+                )}
+              </CompareSlider>
+            ) : tool === "remove-bg" && removedBgUrl && file ? (
+              <CompareSlider
+                file={file}
+                rightLabel="Sin fondo"
+                rightBadge="PNG"
+                onClose={onRemove}
+              >
+                <img
+                  src={removedBgUrl}
+                  alt="Imagen sin fondo"
+                  className="h-full w-full object-contain p-6"
+                />
+              </CompareSlider>
+            ) : (
+              file &&
+              previewUrl && (
+                <div className="checkerboard relative flex h-[260px] w-full max-w-[480px] items-center justify-center overflow-hidden border border-[#DEDDD3] shadow-[0_15px_35px_rgba(12,19,48,.1)] sm:h-[380px]">
+                  <div className="font-technical absolute left-4 top-4 z-10 bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.15em] text-[#0C1330] shadow-sm">
+                    Vista previa
+                  </div>
+                  <button
+                    onClick={onRemove}
+                    disabled={processing}
+                    aria-label="Quitar imagen"
+                    className="absolute right-4 top-4 z-10 flex h-7 w-7 items-center justify-center bg-white/90 text-[#0C1330] shadow-sm hover:bg-[#0C1330] hover:text-white disabled:opacity-40"
+                  >
+                    <X size={13} />
+                  </button>
+                  <img
+                    src={previewUrl}
+                    alt={file.name}
+                    className="h-full w-full object-contain p-6"
+                  />
+                </div>
+              )
             )}
-          </CompareSlider>
-        ) : tool === "remove-bg" && removedBgUrl && file ? (
-          <CompareSlider
-            file={file}
-            rightLabel="Sin fondo"
-            rightBadge="PNG"
-            onClose={onRemove}
-          >
-            <img
-              src={removedBgUrl}
-              alt="Imagen sin fondo"
-              className="h-full w-full object-contain p-6"
-            />
-          </CompareSlider>
-        ) : file && previewUrl ? (
-          <div className="checkerboard relative flex h-[260px] w-full max-w-[480px] sm:h-[380px] items-center justify-center overflow-hidden border border-[#DEDDD3] shadow-[0_15px_35px_rgba(12,19,48,.1)]">
-            <div className="font-technical absolute left-4 top-4 z-10 bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.15em] text-[#0C1330] shadow-sm">
-              Vista previa
-            </div>
-            <button
-              onClick={onRemove}
-              disabled={processing}
-              aria-label="Quitar imagen"
-              className="absolute right-4 top-4 z-10 flex h-7 w-7 items-center justify-center bg-white/90 text-[#0C1330] shadow-sm hover:bg-[#0C1330] hover:text-white disabled:opacity-40"
-            >
-              <X size={13} />
-            </button>
-            <img
-              src={previewUrl}
-              alt={file.name}
-              className="h-full w-full object-contain p-6"
-            />
           </div>
         ) : (
           <button
@@ -299,7 +368,7 @@ export default function PreviewCanvas({
       <div className="font-technical mt-3 flex flex-wrap items-center justify-between gap-2 border border-[#DEDDD3] bg-[#FBFBF7] px-3 py-2 text-[11px] text-[#7A8194]">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1 text-[#0C1330]">
-            100% <ChevronDown size={12} />
+            {zoom}% <ChevronDown size={12} />
           </span>
           <button
             onClick={() => setZoomTool("hand")}
@@ -310,17 +379,16 @@ export default function PreviewCanvas({
             <Hand size={14} />
           </button>
           <button
-            onClick={() => setZoomTool("fit")}
+            onClick={fitToScreen}
             aria-label="Ajustar a pantalla"
-            aria-pressed={zoomTool === "fit"}
-            className={`flex h-7 w-7 items-center justify-center border ${zoomTool === "fit" ? "border-[#0C1330] bg-[#0C1330] text-white" : "border-[#DEDDD3] bg-white text-[#0C1330] hover:border-[#0C1330]"}`}
+            className="flex h-7 w-7 items-center justify-center border border-[#DEDDD3] bg-white text-[#0C1330] hover:border-[#0C1330]"
           >
             <Maximize size={14} />
           </button>
         </div>
         <RangeSlider
-          min={0}
-          max={100}
+          min={25}
+          max={200}
           value={zoom}
           onChange={setZoom}
           className="w-32"
@@ -358,8 +426,8 @@ export default function PreviewCanvas({
                   )}
                 </div>
                 <p className="text-[11px] leading-relaxed text-[#7A8194]">
-                  Cambia cualquier color conservando su sombreado. Cada
-                  selector empieza en el color que ya tiene la imagen.
+                  Cambia cualquier color conservando su sombreado. Cada selector
+                  empieza en el color que ya tiene la imagen.
                 </p>
               </div>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
