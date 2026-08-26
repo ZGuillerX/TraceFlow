@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import mark from "@/assets/mark.svg";
 import fullLogo from "@/assets/traceflow_logo.png";
 
 export function Brand({ compact = false }: { compact?: boolean }) {
@@ -23,7 +22,7 @@ export function Brand({ compact = false }: { compact?: boolean }) {
       aria-label="TraceFlow, inicio"
     >
       <img
-        src={mark}
+        src={fullLogo}
         alt=""
         className={
           compact ? "h-9 w-9 object-contain" : "h-10 w-10 object-contain"

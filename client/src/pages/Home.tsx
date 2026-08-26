@@ -1,7 +1,7 @@
 /* TraceFlow / Vector Atelier: landing fiel al mockup "Vectora Studio" -- tipografia Anton + JetBrains Mono, paleta crema/navy/azul/verde lima. */
 import { ArrowRight, Check } from "lucide-react";
 import { Link } from "wouter";
-import mark from "@/assets/mark.svg";
+import fullLogo from "@/assets/traceflow_logo.png";
 import hero from "@/assets/hero-illustration.webp";
 import sample from "@/assets/sample-transform.webp";
 
@@ -20,7 +20,7 @@ export default function Home() {
     <div className="min-h-screen bg-[#FAF9F5] text-[#0C1330]">
       <header className="flex items-center justify-between gap-8 border-b border-[#E3E2D9] px-6 py-5 sm:px-10">
         <Link href="/" className="flex items-center gap-3">
-          <img src={mark} alt="" className="h-10 w-10 object-contain" />
+          <img src={fullLogo} alt="" className="h-10 w-10 object-contain" />
           <span className="font-display text-2xl text-[#0C1330]">
             TraceFlow
           </span>
@@ -104,7 +104,11 @@ export default function Home() {
             <div className="flex items-center justify-between px-2.5 py-4">
               <div className="flex items-center gap-4">
                 <span className="flex h-9 w-9 items-center justify-center border border-[#DEDDD3]">
-                  <img src={mark} alt="" className="h-6 w-6 object-contain" />
+                  <img
+                    src={fullLogo}
+                    alt=""
+                    className="h-6 w-6 object-contain"
+                  />
                 </span>
                 <span className="font-technical text-[13px] font-bold uppercase tracking-[.16em] text-[#0C1330]">
                   Motor vectorial
@@ -269,7 +273,7 @@ export default function Home() {
 
       <footer className="flex flex-col items-center justify-between gap-3 border-t border-[#E3E2D9] px-6 py-7 text-[13px] text-[#5A6076] sm:flex-row sm:px-10">
         <div className="flex items-center gap-3">
-          <img src={mark} alt="" className="h-8 w-8 object-contain" />
+          <img src={fullLogo} alt="" className="h-8 w-8 object-contain" />
           <span>© 2026 TraceFlow</span>
         </div>
         <span>Raster in. Vector out.</span>
