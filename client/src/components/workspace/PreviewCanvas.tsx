@@ -5,22 +5,13 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
-import {
-  ChevronDown,
-  Hand,
-  ImagePlus,
-  Maximize,
-  MousePointer2,
-  Palette,
-  RefreshCw,
-  X,
-} from "lucide-react";
+import { ImagePlus, MousePointer2, RefreshCw, X } from "lucide-react";
 import CompareSlider from "@/components/studio/CompareSlider";
-import ColorInput from "./ColorInput";
-import RangeSlider from "./RangeSlider";
+import CanvasZoomBar from "./CanvasZoomBar";
+import DetectedColorsPanel from "./DetectedColorsPanel";
+import SourceChip from "./SourceChip";
 import { useDropzone } from "@/hooks/useDropzone";
 import { useImageDimensions } from "@/hooks/useImageDimensions";
-import { formatBytes } from "@/lib/format";
 import type { DetectedColor } from "@/lib/recolor";
 
 export type StudioTool = "vectorize" | "remove-bg";
@@ -46,8 +37,6 @@ interface PreviewCanvasProps {
   colorOverrides: Record<string, string>;
   setColorOverride: (id: string, hex: string) => void;
 }
-
-const MAX_VISIBLE_SWATCHES = 6;
 
 const STAGE_LABELS: Record<string, string> = {
   original: "Preparando imagen",
@@ -98,8 +87,6 @@ export default function PreviewCanvas({
   setColorOverride,
 }: PreviewCanvasProps) {
   const progress = currentStage ? (STAGE_PROGRESS[currentStage] ?? 0) : 0;
-  const visibleSwatches = detectedColors.slice(0, MAX_VISIBLE_SWATCHES);
-  const remainingCount = detectedColors.length - visibleSwatches.length;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const dims = useImageDimensions(previewUrl);
   const [zoomTool, setZoomTool] = useState<"hand" | "fit">("hand");
@@ -176,30 +163,13 @@ export default function PreviewCanvas({
             preview
           </div>
           {file && (
-            <div className="flex items-center gap-2 border border-[#DEDDD3] bg-[#FAF9F5] py-1 pl-1 pr-2">
-              {previewUrl && (
-                <img
-                  src={previewUrl}
-                  alt=""
-                  draggable={false}
-                  className="checkerboard h-7 w-7 shrink-0 border border-[#E3E2D9] object-cover"
-                />
-              )}
-              <span className="max-w-[140px] truncate text-[11px] font-bold text-[#0C1330]">
-                {file.name}
-              </span>
-              <span className="font-technical whitespace-nowrap text-[10px] text-[#7A8194]">
-                {dims ? `${dims.w}×${dims.h}` : "…"} · {formatBytes(file.size)}
-              </span>
-              <button
-                onClick={onRemove}
-                disabled={processing}
-                aria-label="Quitar imagen"
-                className="text-[#7A8194] hover:text-[#0C1330] disabled:opacity-40"
-              >
-                <X size={12} />
-              </button>
-            </div>
+            <SourceChip
+              file={file}
+              previewUrl={previewUrl}
+              dims={dims}
+              processing={processing}
+              onRemove={onRemove}
+            />
           )}
         </div>
         {tool === "vectorize" && (
@@ -351,87 +321,20 @@ export default function PreviewCanvas({
           className="hidden"
         />
       </div>
-      <div className="font-technical mt-3 flex flex-wrap items-center justify-between gap-2 border border-[#DEDDD3] bg-[#FBFBF7] px-3 py-2 text-[11px] text-[#7A8194]">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1 text-[#0C1330]">
-            {zoom}% <ChevronDown size={12} />
-          </span>
-          <button
-            onClick={() => setZoomTool("hand")}
-            aria-label="Herramienta mano"
-            aria-pressed={zoomTool === "hand"}
-            className={`flex h-7 w-7 items-center justify-center border ${zoomTool === "hand" ? "border-[#0C1330] bg-[#0C1330] text-white" : "border-[#DEDDD3] bg-white text-[#0C1330] hover:border-[#0C1330]"}`}
-          >
-            <Hand size={14} />
-          </button>
-          <button
-            onClick={fitToScreen}
-            aria-label="Ajustar a pantalla"
-            className="flex h-7 w-7 items-center justify-center border border-[#DEDDD3] bg-white text-[#0C1330] hover:border-[#0C1330]"
-          >
-            <Maximize size={14} />
-          </button>
-        </div>
-        <RangeSlider
-          min={25}
-          max={200}
-          value={zoom}
-          onChange={setZoom}
-          className="w-32"
-        />
-      </div>
+      <CanvasZoomBar
+        zoom={zoom}
+        setZoom={setZoom}
+        zoomTool={zoomTool}
+        setZoomTool={setZoomTool}
+        onFitToScreen={fitToScreen}
+      />
 
       {tool === "vectorize" && (
-        <div className="mt-5">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#0C1330]">
-            <Palette size={14} className="text-[#1652F5]" /> Colores detectados
-          </div>
-          {detectedColors.length === 0 ? (
-            <p className="mt-2 text-[11px] text-[#9AA1B2]">
-              Genera una preview para ver los colores del trazo.
-            </p>
-          ) : (
-            <>
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {visibleSwatches.map(color => (
-                    <span
-                      key={color.id}
-                      title={colorOverrides[color.id] ?? `#${color.hex}`}
-                      className="h-6 w-6 shrink-0 rounded-full border border-[#DEDDD3]"
-                      style={{
-                        backgroundColor:
-                          colorOverrides[color.id] ?? `#${color.hex}`,
-                      }}
-                    />
-                  ))}
-                  {remainingCount > 0 && (
-                    <span className="flex h-6 shrink-0 items-center justify-center rounded-full border border-[#C8E93F] bg-[#F2F9DA] px-2 text-[10px] font-bold text-[#5F7A0C]">
-                      +{remainingCount}
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] leading-relaxed text-[#7A8194]">
-                  Cambia cualquier color conservando su sombreado. Cada selector
-                  empieza en el color que ya tiene la imagen.
-                </p>
-              </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {detectedColors.map(color => {
-                  const current = colorOverrides[color.id] ?? `#${color.hex}`;
-                  return (
-                    <ColorInput
-                      key={color.id}
-                      value={current}
-                      onChange={hex => setColorOverride(color.id, hex)}
-                      label={current}
-                    />
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
+        <DetectedColorsPanel
+          detectedColors={detectedColors}
+          colorOverrides={colorOverrides}
+          setColorOverride={setColorOverride}
+        />
       )}
     </section>
   );
