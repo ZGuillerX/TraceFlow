@@ -1,7 +1,7 @@
 import { Eraser, HelpCircle, Wand2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import HintButton from "./HintButton";
-import RangeSlider from "./RangeSlider";
+import RangeSlider from "../RangeSlider";
 
 const SWITCH_STYLE = {
   className: "data-[state=checked]:bg-[#0C1330]",

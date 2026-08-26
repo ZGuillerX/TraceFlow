@@ -1,5 +1,5 @@
 import { ChevronDown, Hand, Maximize } from "lucide-react";
-import RangeSlider from "./RangeSlider";
+import RangeSlider from "../RangeSlider";
 
 interface CanvasZoomBarProps {
   zoom: number;

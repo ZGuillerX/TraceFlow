@@ -1,5 +1,5 @@
 import { Palette } from "lucide-react";
-import ColorInput from "./ColorInput";
+import ColorInput from "../ColorInput";
 import type { DetectedColor } from "@/lib/recolor";
 
 const MAX_VISIBLE_SWATCHES = 6;

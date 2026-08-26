@@ -1,4 +1,4 @@
-import type { StudioTool } from "./PreviewCanvas";
+import type { StudioTool } from "../canvas/PreviewCanvas";
 
 interface ToolSwitcherProps {
   tool: StudioTool;

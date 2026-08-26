@@ -9,7 +9,7 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
-import QualitySelector from "@/components/workspace/QualitySelector";
+import QualitySelector from "@/components/workspace/settings/QualitySelector";
 import TraceFlowShell from "@/components/layout/TraceFlowShell";
 import ZoomLightbox from "@/components/layout/ZoomLightbox";
 import { toast } from "sonner";

@@ -10,7 +10,7 @@ import {
   RefreshCw,
   WandSparkles,
 } from "lucide-react";
-import type { StudioTool } from "@/components/workspace/PreviewCanvas";
+import type { StudioTool } from "@/components/workspace/canvas/PreviewCanvas";
 import { useImageDimensions } from "@/hooks/useImageDimensions";
 import { formatBytes } from "@/lib/format";
 

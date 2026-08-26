@@ -4,8 +4,8 @@ import StudioTopBar from "@/components/studio/StudioTopBar";
 import InspectorPanel from "@/components/studio/InspectorPanel";
 import PreviewCanvas, {
   type StudioTool,
-} from "@/components/workspace/PreviewCanvas";
-import SettingsPanel from "@/components/workspace/SettingsPanel";
+} from "@/components/workspace/canvas/PreviewCanvas";
+import SettingsPanel from "@/components/workspace/settings/SettingsPanel";
 import { toast } from "sonner";
 import { useBackgroundRemovalTool } from "@/hooks/useBackgroundRemovalTool";
 import { useVectorizeFlow } from "@/hooks/useVectorizeFlow";

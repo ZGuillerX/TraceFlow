@@ -4,7 +4,7 @@ import QualitySelector from "./QualitySelector";
 import ToolSwitcher from "./ToolSwitcher";
 import VectorizeSettings from "./VectorizeSettings";
 import type { RemoveBgQuality } from "@/lib/api";
-import type { StudioTool } from "./PreviewCanvas";
+import type { StudioTool } from "../canvas/PreviewCanvas";
 
 interface SettingsPanelProps {
   tool: StudioTool;
