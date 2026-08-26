@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectColors, recolorSvg } from "./recolor";
+import { applyPathOverrides, detectColors, recolorSvg, tagPaths } from "./recolor";
 
 describe("detectColors", () => {
   it("agrupa dos azules casi iguales en una sola familia", () => {
@@ -79,6 +79,50 @@ describe("recolorSvg", () => {
     const svg = '<path fill="#1652F5"/>';
     const colors = detectColors(svg);
     const result = recolorSvg(svg, colors, {});
+    expect(result).toBe(svg);
+  });
+});
+
+describe("tagPaths", () => {
+  it("asigna un data-trace-id por orden de aparicion", () => {
+    const svg = '<path fill="#111111"/><path fill="#222222"/><path fill="#333333"/>';
+    const result = tagPaths(svg);
+    expect(result).toContain('<path data-trace-id="0" fill="#111111"/>');
+    expect(result).toContain('<path data-trace-id="1" fill="#222222"/>');
+    expect(result).toContain('<path data-trace-id="2" fill="#333333"/>');
+  });
+
+  it("no toca ningun otro elemento del svg", () => {
+    const svg = '<svg><rect fill="#111111"/><path fill="#222222"/></svg>';
+    const result = tagPaths(svg);
+    expect(result).toContain('<rect fill="#111111"/>');
+    expect(result).toContain('<path data-trace-id="0" fill="#222222"/>');
+  });
+});
+
+describe("applyPathOverrides", () => {
+  it("cambia solo el trazo indicado, sin afectar a otros con el mismo color", () => {
+    // ojo y oreja: mismo color hoy, el usuario quiere separar solo el ojo
+    const svg = '<path fill="#111111"/><path fill="#111111"/>';
+    const result = applyPathOverrides(svg, { 0: "#FF0000" });
+    const fills = Array.from(result.matchAll(/fill="#([0-9A-Fa-f]{6})"/g)).map(m => m[1]);
+    expect(fills).toEqual(["FF0000", "111111"]);
+  });
+
+  it("no deja ningun atributo nuevo en el resultado", () => {
+    const svg = '<path fill="#111111"/>';
+    const result = applyPathOverrides(svg, { 0: "#FF0000" });
+    expect(result).not.toContain("data-trace-id");
+  });
+
+  it("sin overrides devuelve el svg intacto", () => {
+    const svg = '<path fill="#111111"/>';
+    expect(applyPathOverrides(svg, {})).toBe(svg);
+  });
+
+  it("un override sobre un indice fuera de rango no rompe nada", () => {
+    const svg = '<path fill="#111111"/>';
+    const result = applyPathOverrides(svg, { 5: "#FF0000" });
     expect(result).toBe(svg);
   });
 });

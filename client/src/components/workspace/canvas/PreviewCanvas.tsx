@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -7,12 +8,13 @@ import {
 } from "react";
 import { ImagePlus, MousePointer2, RefreshCw, X } from "lucide-react";
 import CompareSlider from "@/components/studio/CompareSlider";
-import CanvasZoomBar from "./CanvasZoomBar";
+import CanvasZoomBar, { type CanvasTool } from "./CanvasZoomBar";
 import DetectedColorsPanel from "./DetectedColorsPanel";
+import PathColorPopover from "./PathColorPopover";
 import SourceChip from "./SourceChip";
 import { useDropzone } from "@/hooks/useDropzone";
 import { useImageDimensions } from "@/hooks/useImageDimensions";
-import type { DetectedColor } from "@/lib/recolor";
+import { tagPaths, type DetectedColor } from "@/lib/recolor";
 
 export type StudioTool = "vectorize" | "remove-bg";
 
@@ -36,6 +38,14 @@ interface PreviewCanvasProps {
   detectedColors: DetectedColor[];
   colorOverrides: Record<string, string>;
   setColorOverride: (id: string, hex: string) => void;
+  setPathOverride: (traceIndex: number, hex: string) => void;
+}
+
+interface SelectedPath {
+  traceIndex: number;
+  hex: string;
+  x: number;
+  y: number;
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -64,7 +74,9 @@ const STAGE_PROGRESS: Record<string, number> = {
  * la fuente cargada junto al titulo, barra de progreso en vivo
  * mientras vectoriza (una etapa del pipeline por evento SSE), vista
  * previa real de la imagen antes de convertir, el comparador
- * Original/SVG una vez listo, y los colores detectados. */
+ * Original/SVG una vez listo, los colores detectados, y (en modo
+ * "seleccionar") un clic directo sobre cualquier trazo del SVG para
+ * recolorearlo sin afectar a otros trazos que compartan su color. */
 export default function PreviewCanvas({
   input,
   tool,
@@ -85,12 +97,14 @@ export default function PreviewCanvas({
   detectedColors,
   colorOverrides,
   setColorOverride,
+  setPathOverride,
 }: PreviewCanvasProps) {
   const progress = currentStage ? (STAGE_PROGRESS[currentStage] ?? 0) : 0;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const dims = useImageDimensions(previewUrl);
-  const [zoomTool, setZoomTool] = useState<"hand" | "fit">("hand");
+  const [canvasTool, setCanvasTool] = useState<CanvasTool>("hand");
   const [zoom, setZoom] = useState(100);
+  const [selectedPath, setSelectedPath] = useState<SelectedPath | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const panState = useRef<{
     startX: number;
@@ -98,6 +112,15 @@ export default function PreviewCanvas({
     scrollLeft: number;
     scrollTop: number;
   } | null>(null);
+
+  // cada <path> recibe un id por su orden de aparicion, para poder
+  // identificar en el click exactamente cual se toco -- ver
+  // lib/recolor.ts, tagPaths. No cambia nada visual (data-* no tiene
+  // efecto de estilo), solo hace clickeable cada trazo por separado.
+  const interactiveSvg = useMemo(
+    () => (displaySvg ? tagPaths(displaySvg) : displaySvg),
+    [displaySvg]
+  );
 
   // ajustar a pantalla: vuelve a 100% y recentra el scroll -- con
   // object-contain el contenido ya encaja completo al 100%, asi que
@@ -119,7 +142,7 @@ export default function PreviewCanvas({
   // de un transform propio, para heredar gratis los limites naturales
   // del scroll (no se puede arrastrar mas alla del contenido).
   const onCanvasPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (zoomTool !== "hand" || zoom <= 100 || !canvasRef.current) return;
+    if (canvasTool !== "hand" || zoom <= 100 || !canvasRef.current) return;
     panState.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -139,6 +162,27 @@ export default function PreviewCanvas({
     panState.current = null;
   };
 
+  // herramienta "seleccionar": clic directo sobre un trazo del SVG
+  // para recolorearlo puntualmente, sin depender de que
+  // detectColors lo haya separado como familia propia (util cuando
+  // dos partes distintas, p. ej. un ojo y una oreja, comparten el
+  // mismo color y quedarian fusionadas en un solo grupo).
+  const onSvgAreaClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (canvasTool !== "select" || !canvasRef.current) return;
+    const target = e.target as SVGElement;
+    const traceIdAttr = target.getAttribute?.("data-trace-id");
+    if (traceIdAttr === null || traceIdAttr === undefined) return;
+    const fill = target.getAttribute("fill");
+    if (!fill) return;
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    setSelectedPath({
+      traceIndex: Number(traceIdAttr),
+      hex: fill.toUpperCase(),
+      x: e.clientX - canvasRect.left,
+      y: e.clientY - canvasRect.top,
+    });
+  };
+
   useEffect(() => {
     if (!file) {
       setPreviewUrl(null);
@@ -148,6 +192,13 @@ export default function PreviewCanvas({
     setPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
+
+  // un svg nuevo (o ninguno) invalida cualquier trazo seleccionado del
+  // resultado anterior -- evita un popover apuntando a un indice que
+  // ya no corresponde a nada.
+  useEffect(() => {
+    setSelectedPath(null);
+  }, [svg]);
 
   // processing bloquea el drop: soltar una imagen nueva a medio
   // trazado interrumpiria el proceso en curso de forma confusa (para
@@ -198,7 +249,7 @@ export default function PreviewCanvas({
         onPointerMove={onCanvasPointerMove}
         onPointerUp={onCanvasPointerUp}
         onPointerLeave={onCanvasPointerUp}
-        className={`paper-grid relative flex min-h-[300px] items-center justify-center overflow-auto border border-dashed p-4 transition-colors sm:min-h-[430px] ${dropzone.isDragging ? "border-[#1652F5] bg-[#eef3ff]" : "border-[#CBCAC0] bg-[#F4F3EE]"} ${zoomTool === "hand" && zoom > 100 ? "cursor-grab active:cursor-grabbing" : ""}`}
+        className={`paper-grid relative flex min-h-[300px] items-center justify-center overflow-auto border border-dashed p-4 transition-colors sm:min-h-[430px] ${dropzone.isDragging ? "border-[#1652F5] bg-[#eef3ff]" : "border-[#CBCAC0] bg-[#F4F3EE]"} ${canvasTool === "hand" && zoom > 100 ? "cursor-grab active:cursor-grabbing" : ""} ${canvasTool === "select" ? "cursor-pointer" : ""}`}
       >
         {processing ? (
           <div className="flex h-[260px] w-full max-w-[480px] sm:h-[380px] flex-col items-center justify-center gap-4 border border-[#DEDDD3] bg-white p-6 shadow-[0_15px_35px_rgba(12,19,48,.1)]">
@@ -250,8 +301,9 @@ export default function PreviewCanvas({
                 onClose={onRemove}
               >
                 <div
+                  onClick={onSvgAreaClick}
                   className="h-full w-full p-6 [&_svg]:h-full [&_svg]:w-full [&_svg]:object-contain"
-                  dangerouslySetInnerHTML={{ __html: displaySvg }}
+                  dangerouslySetInnerHTML={{ __html: interactiveSvg ?? "" }}
                 />
                 {mode === "paths" && (
                   <div className="pointer-events-none absolute inset-0 border-2 border-[#1652F5]/40" />
@@ -320,12 +372,24 @@ export default function PreviewCanvas({
           onChange={onFile}
           className="hidden"
         />
+        {selectedPath && (
+          <PathColorPopover
+            x={selectedPath.x}
+            y={selectedPath.y}
+            hex={selectedPath.hex}
+            onChange={hex => {
+              setPathOverride(selectedPath.traceIndex, hex);
+              setSelectedPath(prev => (prev ? { ...prev, hex: hex.toUpperCase() } : prev));
+            }}
+            onClose={() => setSelectedPath(null)}
+          />
+        )}
       </div>
       <CanvasZoomBar
         zoom={zoom}
         setZoom={setZoom}
-        zoomTool={zoomTool}
-        setZoomTool={setZoomTool}
+        canvasTool={canvasTool}
+        setCanvasTool={setCanvasTool}
         onFitToScreen={fitToScreen}
       />
 

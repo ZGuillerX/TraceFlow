@@ -111,6 +111,7 @@ export default function Workspace() {
             detectedColors={flow.detectedColors}
             colorOverrides={flow.colorOverrides}
             setColorOverride={flow.setColorOverride}
+            setPathOverride={flow.setPathOverride}
           />
         </div>
         <InspectorPanel

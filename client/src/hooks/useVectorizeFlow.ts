@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { vectorizeImageStream } from "@/lib/api";
-import { detectColors, recolorSvg } from "@/lib/recolor";
+import { applyPathOverrides, detectColors, recolorSvg } from "@/lib/recolor";
 import type { VectorizeParams } from "./useVectorizeParams";
 
 /** Encapsula el flujo completo de vectorizado: la petición SSE con
@@ -13,18 +13,27 @@ export function useVectorizeFlow(file: File | null, params: VectorizeParams) {
   const [svg, setSvg] = useState<string | null>(null);
   const [bgHex, setBgHex] = useState<string | null>(null);
   const [colorOverrides, setColorOverrides] = useState<Record<string, string>>({});
+  const [pathOverrides, setPathOverrides] = useState<Record<number, string>>({});
   const [processing, setProcessing] = useState(false);
   const [currentStage, setCurrentStage] = useState<string | null>(null);
   const abortController = useRef<AbortController | null>(null);
 
   const detectedColors = useMemo(() => (svg ? detectColors(svg, bgHex) : []), [svg, bgHex]);
-  const displaySvg = useMemo(
-    () => (svg ? recolorSvg(svg, detectedColors, colorOverrides, bgHex) : svg),
-    [svg, detectedColors, colorOverrides, bgHex]
-  );
+  const displaySvg = useMemo(() => {
+    if (!svg) return svg;
+    const byGroup = recolorSvg(svg, detectedColors, colorOverrides, bgHex);
+    return applyPathOverrides(byGroup, pathOverrides);
+  }, [svg, detectedColors, colorOverrides, bgHex, pathOverrides]);
 
   const setColorOverride = (id: string, hex: string) =>
     setColorOverrides(prev => ({ ...prev, [id]: hex }));
+
+  // ver PreviewCanvas: el trazo se identifica por su indice de
+  // aparicion en displaySvg, no en el svg original -- ambos coinciden
+  // en cantidad/orden porque recolorSvg solo cambia fills, nunca
+  // agrega ni quita paths.
+  const setPathOverride = (traceIndex: number, hex: string) =>
+    setPathOverrides(prev => ({ ...prev, [traceIndex]: hex }));
 
   // se llama al cargar un archivo nuevo o al quitar el actual -- el
   // resultado vectorizado y los overrides de color pertenecen a la
@@ -32,6 +41,7 @@ export function useVectorizeFlow(file: File | null, params: VectorizeParams) {
   const reset = () => {
     setSvg(null);
     setColorOverrides({});
+    setPathOverrides({});
   };
 
   const process = async () => {
@@ -59,6 +69,7 @@ export function useVectorizeFlow(file: File | null, params: VectorizeParams) {
       setSvg(resultSvg);
       setBgHex(resultBgHex);
       setColorOverrides({});
+      setPathOverrides({});
       toast.success("Preview vectorial actualizada.");
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
@@ -86,6 +97,8 @@ export function useVectorizeFlow(file: File | null, params: VectorizeParams) {
     detectedColors,
     colorOverrides,
     setColorOverride,
+    pathOverrides,
+    setPathOverride,
     process,
     cancel,
     reset,

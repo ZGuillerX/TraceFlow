@@ -198,3 +198,39 @@ export function recolorSvg(
     return `fill="#${toHex(nr)}${toHex(ng)}${toHex(nb)}"`;
   });
 }
+
+/** Asigna un id estable (por orden de aparicion) a cada <path> del SVG
+ * como atributo data-trace-id -- para poder identificar en el lienzo
+ * exactamente que trazo se clickeo, incluso si dos trazos distintos
+ * (p. ej. un ojo y una oreja) comparten el mismo color y quedarian
+ * fusionados en la misma familia de detectColors. vtracer no numera
+ * sus paths, asi que el id se asigna aca, despues de recolorSvg (que
+ * no agrega ni quita paths, solo les cambia el fill -- el orden de
+ * aparicion se mantiene estable entre llamadas para el mismo SVG). */
+export function tagPaths(svg: string): string {
+  let i = 0;
+  return svg.replace(/<path\b/g, () => `<path data-trace-id="${i++}"`);
+}
+
+/** Aplica cambios de color a trazos individuales, identificados por su
+ * posicion de aparicion en el SVG (0, 1, 2... la misma indexacion que
+ * usa tagPaths) -- sin dejar ningun atributo nuevo en el resultado,
+ * para que el SVG siga siendo el mismo que se descarga o se muestra
+ * como codigo fuente en el Inspector. Se aplica DESPUES de recolorSvg
+ * (por grupo), asi que un trazo con override individual gana sobre el
+ * color que le haya tocado por pertenecer a una familia. */
+export function applyPathOverrides(
+  svg: string,
+  overrides: Record<number, string>
+): string {
+  if (Object.keys(overrides).length === 0) return svg;
+  let i = 0;
+  return svg.replace(/<path\b[^>]*>/g, tag => {
+    const hex = overrides[i++];
+    if (!hex) return tag;
+    return tag.replace(
+      /fill="#[0-9A-Fa-f]{6}"/,
+      `fill="#${hex.replace("#", "").toUpperCase()}"`
+    );
+  });
+}
