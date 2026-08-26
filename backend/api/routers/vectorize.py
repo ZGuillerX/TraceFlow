@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import time
 from pathlib import Path
 from typing import AsyncIterator, Iterator
@@ -24,6 +25,8 @@ from services.vectorize_service import (
     run_vectorize,
     run_vectorize_stages,
 )
+
+logger = logging.getLogger("traceflow")
 
 vectorize_limiter = RateLimiter(RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_SECONDS)
 # limite de rafaga corta, ademas del de arriba -- ver comentario junto
@@ -79,6 +82,16 @@ async def _stream_stages(
             item = await asyncio.wait_for(asyncio.to_thread(_advance, it), timeout=remaining)
         except asyncio.TimeoutError:
             yield {"stage": "error", "message": "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple."}
+            return
+        except Exception:
+            # a esta altura los headers del stream ya se enviaron, asi
+            # que una excepcion no controlada del pipeline (PIL/vtracer/
+            # numpy) no puede convertirse en un HTTPException normal --
+            # el handler global de main.py tampoco puede intervenir aca.
+            # Se loguea y se manda como etapa "error", mismo contrato
+            # que el frontend ya sabe interpretar para el caso de timeout.
+            logger.exception("Error no controlado durante el streaming de vectorizado")
+            yield {"stage": "error", "message": "Ocurrió un error al procesar la imagen. Intenta de nuevo."}
             return
         if item is _STREAM_DONE:
             return

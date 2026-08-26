@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -7,8 +6,11 @@ from fastapi.staticfiles import StaticFiles
 
 from api.router import router
 from core.config import CORS_ALLOWED_ORIGINS
+from core.exception_handlers import unhandled_exception_handler
+from core.logging import configure_logging
+from core.security_headers import SecurityHeadersMiddleware
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+configure_logging()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DIST_DIR = BASE_DIR / "dist"
@@ -22,6 +24,8 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Bg-Color"],
 )
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 app.include_router(router)
 

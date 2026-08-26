@@ -30,11 +30,12 @@ TraceFlow/
 │       └── lib/          # Cliente de la API, recoloreado de SVG, utilidades
 ├── backend/              # Backend (FastAPI)
 │   ├── main.py           # Punto de entrada: monta la API y sirve el frontend compilado
-│   ├── routes.py         # Endpoints HTTP
-│   ├── config.py         # Límites, timeouts, CORS
-│   ├── vectorize_service.py  # Orquesta el pipeline completo por etapas
-│   ├── rate_limit.py      # Límite de peticiones por IP
-│   └── pipeline/          # Pasos individuales: vectorizar, quitar fondo, cuantizar, escalar, validar
+│   ├── api/
+│   │   └── routers/      # Endpoints HTTP (vectorizar, quitar fondo)
+│   ├── services/         # Orquestación del pipeline por etapas
+│   ├── core/             # Config, rate limiting, timeouts, logging, seguridad
+│   ├── pipeline/         # Pasos individuales: vectorizar, quitar fondo, cuantizar, escalar, validar
+│   └── tests/            # pytest (backend/README de tests si aplica)
 └── dist/                  # Build de producción del frontend (generado, no versionado)
 ```
 
@@ -114,13 +115,16 @@ FastAPI detecta la carpeta `dist/` y sirve el frontend compilado y la API desde 
 
 ## Configuración
 
-Los límites y tiempos de espera del backend viven en `backend/config.py`:
+Los límites y tiempos de espera del backend viven en `backend/core/config.py`:
 
-- `CORS_ALLOWED_ORIGINS`: orígenes permitidos para llamar a la API. Agrega el dominio real del frontend al desplegar.
+- `CORS_ALLOWED_ORIGINS`: orígenes permitidos para llamar a la API. En desarrollo usa `localhost:5173` por defecto; en producción, configúralo con la variable de entorno `TRACEFLOW_CORS_ORIGINS` (lista de orígenes separados por comas, ej. `TRACEFLOW_CORS_ORIGINS=https://traceflow.app,https://www.traceflow.app`).
 - `PROCESSING_TIMEOUT_SECONDS`: tiempo máximo por petición de vectorizado/quitar fondo (cubre el arranque en frío del modelo).
 - `MAX_UPLOAD_SIZE_BYTES`: tamaño máximo de archivo aceptado.
+- `MAX_IMAGE_PIXELS`: resolución máxima aceptada (ancho × alto), protección contra imágenes con una resolución desproporcionada a su peso en disco.
 - `RATE_LIMIT_MAX_REQUESTS` / `RATE_LIMIT_WINDOW_SECONDS`: límite general de peticiones por IP.
 - `VECTORIZE_BURST_MAX_REQUESTS` / `VECTORIZE_BURST_WINDOW_SECONDS`: límite de ráfaga corta específico para los endpoints de vectorizado.
+
+El backend responde con headers de seguridad HTTP básicos (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) en toda respuesta, y loguea (sin exponer al cliente) cualquier excepción no anticipada del pipeline.
 
 ## API
 

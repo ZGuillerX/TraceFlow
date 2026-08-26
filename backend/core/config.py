@@ -6,9 +6,17 @@ que ajustan, con su comentario explicando por que se eligio ese valor
 especifico; centralizarlos aca los sacaria de ese contexto.
 """
 
-# Origenes permitidos para llamar a la API (CORS). En produccion, agregar
-# aqui el dominio real desde donde se sirva el frontend.
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+import os
+
+# Origenes permitidos para llamar a la API (CORS). Configurable con la
+# variable de entorno TRACEFLOW_CORS_ORIGINS (lista separada por comas)
+# para produccion; sin ella, cae al valor de desarrollo de siempre.
+_env_origins = os.environ.get("TRACEFLOW_CORS_ORIGINS")
+CORS_ALLOWED_ORIGINS = (
+    [origin.strip() for origin in _env_origins.split(",") if origin.strip()]
+    if _env_origins
+    else ["http://localhost:5173", "http://127.0.0.1:5173"]
+)
 
 # El primer llamado a rembg carga el modelo BiRefNet (~90s en CPU) antes de
 # procesar; despues queda cacheado en memoria y cada imagen tarda unos
@@ -17,6 +25,13 @@ PROCESSING_TIMEOUT_SECONDS = 180
 
 # Tamano maximo de archivo aceptado en /api/vectorize y /api/remove-background.
 MAX_UPLOAD_SIZE_BYTES = 15 * 1024 * 1024
+
+# Resolucion maxima aceptada (ancho * alto). Un archivo puede pasar el
+# limite de tamano en disco (arriba) y aun asi decodificar a una imagen
+# enorme en memoria (PNG muy comprimido con dimensiones absurdas, tipo
+# "decompression bomb") -- esto corta eso antes de que PIL/numpy/vtracer
+# lleguen a procesarla. ~5000x5000px, muy por encima de cualquier uso real.
+MAX_IMAGE_PIXELS = 25_000_000
 
 # Peticiones por IP permitidas por ventana en los endpoints pesados: sin
 # esto, cualquiera puede mandar cientos de conversiones seguidas y
