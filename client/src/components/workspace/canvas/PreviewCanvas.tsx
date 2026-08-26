@@ -104,13 +104,14 @@ export default function PreviewCanvas({
   const dims = useImageDimensions(previewUrl);
   const [canvasTool, setCanvasTool] = useState<CanvasTool>("hand");
   const [zoom, setZoom] = useState(100);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [selectedPath, setSelectedPath] = useState<SelectedPath | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const panState = useRef<{
     startX: number;
     startY: number;
-    scrollLeft: number;
-    scrollTop: number;
+    offsetX: number;
+    offsetY: number;
   } | null>(null);
 
   // cada <path> recibe un id por su orden de aparicion, para poder
@@ -127,6 +128,7 @@ export default function PreviewCanvas({
   // "ajustar" equivale a deshacer cualquier zoom/pan manual.
   const fitToScreen = () => {
     setZoom(100);
+    setPanOffset({ x: 0, y: 0 });
     const el = canvasRef.current;
     if (el) {
       requestAnimationFrame(() => {
@@ -146,20 +148,34 @@ export default function PreviewCanvas({
     panState.current = {
       startX: e.clientX,
       startY: e.clientY,
-      scrollLeft: canvasRef.current.scrollLeft,
-      scrollTop: canvasRef.current.scrollTop,
+      offsetX: panOffset.x,
+      offsetY: panOffset.y,
     };
     canvasRef.current.setPointerCapture(e.pointerId);
   };
   const onCanvasPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (!panState.current || !canvasRef.current) return;
-    canvasRef.current.scrollLeft =
-      panState.current.scrollLeft - (e.clientX - panState.current.startX);
-    canvasRef.current.scrollTop =
-      panState.current.scrollTop - (e.clientY - panState.current.startY);
+    if (!panState.current) return;
+    setPanOffset({
+      x: panState.current.offsetX + e.clientX - panState.current.startX,
+      y: panState.current.offsetY + e.clientY - panState.current.startY,
+    });
   };
   const onCanvasPointerUp = () => {
     panState.current = null;
+  };
+
+  const onCanvasWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const zoomDelta = Math.min(
+      10,
+      Math.max(1, Math.round(Math.abs(e.deltaY) / 20))
+    );
+    setZoom(currentZoom =>
+      Math.min(
+        200,
+        Math.max(25, currentZoom + (e.deltaY < 0 ? zoomDelta : -zoomDelta))
+      )
+    );
   };
 
   // herramienta "seleccionar": clic directo sobre un trazo del SVG
@@ -249,7 +265,8 @@ export default function PreviewCanvas({
         onPointerMove={onCanvasPointerMove}
         onPointerUp={onCanvasPointerUp}
         onPointerLeave={onCanvasPointerUp}
-        className={`paper-grid relative flex min-h-[300px] items-center justify-center overflow-auto border border-dashed p-4 transition-colors sm:min-h-[430px] ${dropzone.isDragging ? "border-[#1652F5] bg-[#eef3ff]" : "border-[#CBCAC0] bg-[#F4F3EE]"} ${canvasTool === "hand" && zoom > 100 ? "cursor-grab active:cursor-grabbing" : ""} ${canvasTool === "select" ? "cursor-pointer" : ""}`}
+        onWheel={onCanvasWheel}
+        className={`paper-grid relative flex min-h-[300px] items-center justify-center overflow-hidden border border-dashed p-4 transition-colors sm:min-h-[430px] ${dropzone.isDragging ? "border-[#1652F5] bg-[#eef3ff]" : "border-[#CBCAC0] bg-[#F4F3EE]"} ${canvasTool === "hand" && zoom > 100 ? "cursor-grab active:cursor-grabbing" : ""} ${canvasTool === "select" ? "cursor-crosshair" : ""}`}
       >
         {processing ? (
           <div className="flex h-[260px] w-full max-w-[480px] sm:h-[380px] flex-col items-center justify-center gap-4 border border-[#DEDDD3] bg-white p-6 shadow-[0_15px_35px_rgba(12,19,48,.1)]">
@@ -283,14 +300,16 @@ export default function PreviewCanvas({
           (tool === "remove-bg" && removedBgUrl && file) ||
           (file && previewUrl) ? (
           <div
-            style={{ transform: `scale(${zoom / 100})` }}
+            style={{
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom / 100})`,
+            }}
             // w-full max-w-[480px] igual que sus 3 posibles contenidos
             // (CompareSlider o el preview simple) -- sin esto, este div
             // no tiene ancho propio (shrink-to-fit) y su contenido es
             // enteramente position:absolute (sin nada en flujo normal
             // que le de una referencia de ancho), asi que colapsa a
             // practicamente 0px en vez de mostrar el resultado.
-            className="w-full max-w-[480px] shrink-0 transition-transform"
+            className="w-full max-w-[480px] shrink-0"
           >
             {tool === "vectorize" && svg && displaySvg && file ? (
               <CompareSlider
@@ -379,7 +398,9 @@ export default function PreviewCanvas({
             hex={selectedPath.hex}
             onChange={hex => {
               setPathOverride(selectedPath.traceIndex, hex);
-              setSelectedPath(prev => (prev ? { ...prev, hex: hex.toUpperCase() } : prev));
+              setSelectedPath(prev =>
+                prev ? { ...prev, hex: hex.toUpperCase() } : prev
+              );
             }}
             onClose={() => setSelectedPath(null)}
           />
