@@ -12,6 +12,7 @@ import {
   vectorizeImageStream,
   type RemoveBgQuality,
 } from "@/lib/api";
+import { downloadBlob, downloadUrl } from "@/lib/download";
 import { detectColors, recolorSvg } from "@/lib/recolor";
 
 export default function Workspace() {
@@ -131,26 +132,20 @@ export default function Workspace() {
   };
   const downloadRemovedBg = () => {
     if (!removedBgUrl) return toast.info("Quita el fondo primero.");
-    const a = document.createElement("a");
-    a.href = removedBgUrl;
-    a.download =
-      (file?.name.replace(/\.[^.]+$/, "") || "traceflow") + "-sin-fondo.png";
-    a.click();
+    downloadUrl(
+      removedBgUrl,
+      (file?.name.replace(/\.[^.]+$/, "") || "traceflow") + "-sin-fondo.png"
+    );
     toast.success("Exportación PNG lista.");
   };
   const download = () => {
     if (!displaySvg) return toast.info("Genera una preview para exportar.");
-    const url = URL.createObjectURL(
-      new Blob([displaySvg], { type: "image/svg+xml" })
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download =
+    downloadBlob(
+      new Blob([displaySvg], { type: "image/svg+xml" }),
       (file?.name.replace(/\.[^.]+$/, "") || "traceflow") +
-      (removeBg ? "-sin-fondo" : "") +
-      ".svg";
-    a.click();
-    URL.revokeObjectURL(url);
+        (removeBg ? "-sin-fondo" : "") +
+        ".svg"
+    );
     toast.success("Exportación SVG lista.");
   };
   return (

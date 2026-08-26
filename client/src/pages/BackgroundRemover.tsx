@@ -1,5 +1,5 @@
 /* TraceFlow / Vector Atelier: eliminación de fondos con checkerboard, anotaciones antes/después y acción azul eléctrica. */
-import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   Eraser,
@@ -13,7 +13,9 @@ import TraceFlowShell from "@/components/layout/TraceFlowShell";
 import ZoomLightbox from "@/components/layout/ZoomLightbox";
 import { toast } from "sonner";
 import sample from "@/assets/sample-transform.webp";
+import { useDropzone } from "@/hooks/useDropzone";
 import { removeBackgroundApi, type RemoveBgQuality } from "@/lib/api";
+import { downloadUrl } from "@/lib/download";
 
 export default function BackgroundRemover() {
   const input = useRef<HTMLInputElement>(null);
@@ -43,22 +45,10 @@ export default function BackgroundRemover() {
   };
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) =>
     loadFile(e.target.files?.[0]);
-  const [isDragging, setIsDragging] = useState(false);
-  const onDragOver = (e: DragEvent<HTMLDivElement>) => {
-    if (processing) return;
-    e.preventDefault();
-    setIsDragging(true);
-  };
-  const onDragLeave = (e: DragEvent<HTMLDivElement>) => {
-    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-    setIsDragging(false);
-  };
-  const onDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (processing) return;
-    loadFile(e.dataTransfer.files[0]);
-  };
+  const { isDragging, onDragOver, onDragLeave, onDrop } = useDropzone({
+    onDrop: loadFile,
+    disabled: processing,
+  });
   const reset = () => {
     setFile(null);
     setOriginalUrl(null);
@@ -84,11 +74,10 @@ export default function BackgroundRemover() {
   };
   const download = () => {
     if (!resultUrl) return toast.info("Procesa una imagen para descargar.");
-    const a = document.createElement("a");
-    a.href = resultUrl;
-    a.download =
-      (file?.name.replace(/\.[^.]+$/, "") || "traceflow") + "-sin-fondo.png";
-    a.click();
+    downloadUrl(
+      resultUrl,
+      (file?.name.replace(/\.[^.]+$/, "") || "traceflow") + "-sin-fondo.png"
+    );
     toast.success("PNG transparente descargado.");
   };
   const imgSrc = showOriginal ? originalUrl || sample : resultUrl || sample;

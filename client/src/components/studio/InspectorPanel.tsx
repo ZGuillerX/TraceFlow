@@ -11,6 +11,8 @@ import {
   WandSparkles,
 } from "lucide-react";
 import type { StudioTool } from "@/components/workspace/PreviewCanvas";
+import { useImageDimensions } from "@/hooks/useImageDimensions";
+import { formatBytes } from "@/lib/format";
 
 interface InspectorPanelProps {
   tool: StudioTool;
@@ -26,11 +28,6 @@ interface InspectorPanelProps {
 
 function countMatches(text: string, pattern: RegExp): number {
   return (text.match(pattern) ?? []).length;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
 /** Panel derecho "INSPECTOR" del Studio: cuando la herramienta es
@@ -50,18 +47,14 @@ export default function InspectorPanel({
   removingBg,
 }: InspectorPanelProps) {
   const [copied, setCopied] = useState(false);
-  const [pngDims, setPngDims] = useState<{ w: number; h: number } | null>(null);
+  const pngDims = useImageDimensions(removedBgUrl);
   const [pngSize, setPngSize] = useState<number | null>(null);
 
   useEffect(() => {
     if (!removedBgUrl) {
-      setPngDims(null);
       setPngSize(null);
       return;
     }
-    const img = new Image();
-    img.onload = () => setPngDims({ w: img.naturalWidth, h: img.naturalHeight });
-    img.src = removedBgUrl;
     fetch(removedBgUrl)
       .then(r => r.blob())
       .then(b => setPngSize(b.size));

@@ -2,7 +2,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type DragEvent,
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
@@ -19,6 +18,9 @@ import {
 import CompareSlider from "@/components/studio/CompareSlider";
 import ColorInput from "./ColorInput";
 import RangeSlider from "./RangeSlider";
+import { useDropzone } from "@/hooks/useDropzone";
+import { useImageDimensions } from "@/hooks/useImageDimensions";
+import { formatBytes } from "@/lib/format";
 import type { DetectedColor } from "@/lib/recolor";
 
 export type StudioTool = "vectorize" | "remove-bg";
@@ -46,12 +48,6 @@ interface PreviewCanvasProps {
 }
 
 const MAX_VISIBLE_SWATCHES = 6;
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 const STAGE_LABELS: Record<string, string> = {
   original: "Preparando imagen",
@@ -104,9 +100,8 @@ export default function PreviewCanvas({
   const progress = currentStage ? (STAGE_PROGRESS[currentStage] ?? 0) : 0;
   const visibleSwatches = detectedColors.slice(0, MAX_VISIBLE_SWATCHES);
   const remainingCount = detectedColors.length - visibleSwatches.length;
-  const [isDragging, setIsDragging] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+  const dims = useImageDimensions(previewUrl);
   const [zoomTool, setZoomTool] = useState<"hand" | "fit">("hand");
   const [zoom, setZoom] = useState(100);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -160,35 +155,17 @@ export default function PreviewCanvas({
   useEffect(() => {
     if (!file) {
       setPreviewUrl(null);
-      setDims(null);
       return;
     }
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
-    const img = new Image();
-    img.onload = () => setDims({ w: img.naturalWidth, h: img.naturalHeight });
-    img.src = url;
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
   // processing bloquea el drop: soltar una imagen nueva a medio
   // trazado interrumpiria el proceso en curso de forma confusa (para
   // reemplazar hay que cancelar primero).
-  const onDragOver = (e: DragEvent<HTMLDivElement>) => {
-    if (processing) return;
-    e.preventDefault();
-    setIsDragging(true);
-  };
-  const onDragLeave = (e: DragEvent<HTMLDivElement>) => {
-    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-    setIsDragging(false);
-  };
-  const onDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (processing) return;
-    onDropFile(e.dataTransfer.files[0]);
-  };
+  const dropzone = useDropzone({ onDrop: onDropFile, disabled: processing });
 
   return (
     <section className="border border-[#DEDDD3] bg-white p-4 shadow-[0_18px_50px_rgba(12,19,48,.06)] sm:p-6">
@@ -244,14 +221,14 @@ export default function PreviewCanvas({
       </div>
       <div
         ref={canvasRef}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
+        onDragOver={dropzone.onDragOver}
+        onDragLeave={dropzone.onDragLeave}
+        onDrop={dropzone.onDrop}
         onPointerDown={onCanvasPointerDown}
         onPointerMove={onCanvasPointerMove}
         onPointerUp={onCanvasPointerUp}
         onPointerLeave={onCanvasPointerUp}
-        className={`paper-grid relative flex min-h-[300px] items-center justify-center overflow-auto border border-dashed p-4 transition-colors sm:min-h-[430px] ${isDragging ? "border-[#1652F5] bg-[#eef3ff]" : "border-[#CBCAC0] bg-[#F4F3EE]"} ${zoomTool === "hand" && zoom > 100 ? "cursor-grab active:cursor-grabbing" : ""}`}
+        className={`paper-grid relative flex min-h-[300px] items-center justify-center overflow-auto border border-dashed p-4 transition-colors sm:min-h-[430px] ${dropzone.isDragging ? "border-[#1652F5] bg-[#eef3ff]" : "border-[#CBCAC0] bg-[#F4F3EE]"} ${zoomTool === "hand" && zoom > 100 ? "cursor-grab active:cursor-grabbing" : ""}`}
       >
         {processing ? (
           <div className="flex h-[260px] w-full max-w-[480px] sm:h-[380px] flex-col items-center justify-center gap-4 border border-[#DEDDD3] bg-white p-6 shadow-[0_15px_35px_rgba(12,19,48,.1)]">
