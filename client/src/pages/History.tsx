@@ -2,6 +2,7 @@
 import { ArrowRight, Clock3, Filter, FolderOpen, Search } from "lucide-react";
 import { Link } from "wouter";
 import TraceFlowShell from "@/components/layout/TraceFlowShell";
+import HistoryEmptyIllustration from "@/components/icons/HistoryEmptyIllustration";
 import { toast } from "sonner";
 
 export default function History() {
@@ -50,33 +51,7 @@ export default function History() {
               />
             ))}
           </div>
-          <svg
-            className="pointer-events-none absolute bottom-10 right-10 h-24 w-44 opacity-20"
-            viewBox="0 0 180 90"
-          >
-            <path
-              d="M5 64 C42 8, 66 13, 90 40 S140 70, 176 10"
-              fill="none"
-              stroke="#1687F8"
-              strokeWidth="2"
-            />
-            <circle
-              cx="5"
-              cy="64"
-              r="4"
-              fill="#fff"
-              stroke="#101A46"
-              strokeWidth="2"
-            />
-            <circle
-              cx="176"
-              cy="10"
-              r="4"
-              fill="#fff"
-              stroke="#1687F8"
-              strokeWidth="2"
-            />
-          </svg>
+          <HistoryEmptyIllustration className="pointer-events-none absolute bottom-10 right-10 h-24 w-44 opacity-20" />
           <div className="relative mb-6">
             <div className="relative flex h-20 w-20 items-center justify-center border border-[#dfe2ea] bg-[#f6f6f2] text-[#1687F8]">
               <FolderOpen size={30} strokeWidth={1.6} />
