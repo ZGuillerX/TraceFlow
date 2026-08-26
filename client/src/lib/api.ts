@@ -5,6 +5,10 @@ export interface VectorizeOptions {
   colors: number;
   autoColors: boolean;
   removeBg: boolean;
+  curveSmoothing: number;
+  autoSmoothing: boolean;
+  colorThreshold: number;
+  autoThreshold: boolean;
 }
 
 export interface VectorizeResult {
@@ -25,6 +29,10 @@ export async function vectorizeImage(
   body.append("colors", String(opts.colors));
   body.append("auto_colors", String(opts.autoColors));
   body.append("remove_bg", String(opts.removeBg));
+  body.append("curve_smoothing", String(opts.curveSmoothing));
+  body.append("auto_smoothing", String(opts.autoSmoothing));
+  body.append("color_threshold", String(opts.colorThreshold));
+  body.append("auto_threshold", String(opts.autoThreshold));
 
   const res = await fetch("/api/vectorize", { method: "POST", body });
   if (!res.ok) {
@@ -63,6 +71,10 @@ export async function vectorizeImageStream(
   body.append("colors", String(opts.colors));
   body.append("auto_colors", String(opts.autoColors));
   body.append("remove_bg", String(opts.removeBg));
+  body.append("curve_smoothing", String(opts.curveSmoothing));
+  body.append("auto_smoothing", String(opts.autoSmoothing));
+  body.append("color_threshold", String(opts.colorThreshold));
+  body.append("auto_threshold", String(opts.autoThreshold));
 
   const res = await fetch("/api/vectorize/stream", { method: "POST", body, signal });
   if (!res.ok || !res.body) {

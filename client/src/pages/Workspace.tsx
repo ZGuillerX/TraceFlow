@@ -23,6 +23,10 @@ export default function Workspace() {
   const [detail, setDetail] = useState(72);
   const [colors, setColors] = useState(8);
   const [autoColors, setAutoColors] = useState(true);
+  const [curveSmoothing, setCurveSmoothing] = useState(75);
+  const [autoSmoothing, setAutoSmoothing] = useState(true);
+  const [colorThreshold, setColorThreshold] = useState(60);
+  const [autoThreshold, setAutoThreshold] = useState(true);
   const [removeBg, setRemoveBg] = useState(false);
   const [bgQuality, setBgQuality] = useState<RemoveBgQuality>("high");
   const [removingBg, setRemovingBg] = useState(false);
@@ -74,7 +78,16 @@ export default function Workspace() {
     try {
       const { svg, bgHex } = await vectorizeImageStream(
         file,
-        { detail, colors, autoColors, removeBg },
+        {
+          detail,
+          colors,
+          autoColors,
+          removeBg,
+          curveSmoothing,
+          autoSmoothing,
+          colorThreshold,
+          autoThreshold,
+        },
         stage => setCurrentStage(stage.stage),
         controller.signal
       );
@@ -154,6 +167,14 @@ export default function Workspace() {
             setAutoColors={setAutoColors}
             colors={colors}
             setColors={setColors}
+            curveSmoothing={curveSmoothing}
+            setCurveSmoothing={setCurveSmoothing}
+            autoSmoothing={autoSmoothing}
+            setAutoSmoothing={setAutoSmoothing}
+            colorThreshold={colorThreshold}
+            setColorThreshold={setColorThreshold}
+            autoThreshold={autoThreshold}
+            setAutoThreshold={setAutoThreshold}
             removeBg={removeBg}
             setRemoveBg={setRemoveBg}
             bgQuality={bgQuality}

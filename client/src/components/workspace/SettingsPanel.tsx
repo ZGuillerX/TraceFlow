@@ -14,6 +14,14 @@ interface SettingsPanelProps {
   setAutoColors: (v: boolean) => void;
   colors: number;
   setColors: (v: number) => void;
+  curveSmoothing: number;
+  setCurveSmoothing: (v: number) => void;
+  autoSmoothing: boolean;
+  setAutoSmoothing: (v: boolean) => void;
+  colorThreshold: number;
+  setColorThreshold: (v: number) => void;
+  autoThreshold: boolean;
+  setAutoThreshold: (v: boolean) => void;
   removeBg: boolean;
   setRemoveBg: (v: boolean) => void;
   bgQuality: RemoveBgQuality;
@@ -31,6 +39,10 @@ const HINTS: Record<string, string> = {
   detail: "Más detalle conserva bordes pequeños y textura.",
   autoColors:
     "Analiza la imagen y elige cuántos colores usar. Apágalo para controlarlo tú mismo.",
+  curveSmoothing:
+    "Qué tan redondeadas salen las curvas. Apágalo para fijar tú mismo el nivel de suavizado.",
+  colorThreshold:
+    "Qué tan distintos deben ser dos colores para quedar en capas separadas. Apágalo para fijar tú mismo el umbral.",
   removeBg:
     "El SVG sale con fondo transparente en vez de un color sólido de fondo. Tarda unos segundos más.",
   quality:
@@ -76,15 +88,19 @@ export default function SettingsPanel({
   setAutoColors,
   colors,
   setColors,
+  curveSmoothing,
+  setCurveSmoothing,
+  autoSmoothing,
+  setAutoSmoothing,
+  colorThreshold,
+  setColorThreshold,
+  autoThreshold,
+  setAutoThreshold,
   removeBg,
   setRemoveBg,
   bgQuality,
   setBgQuality,
 }: SettingsPanelProps) {
-  // decorativos: se muestran y se mueven, pero nunca se leen en
-  // process() -- de momento solo diseño, se conectan mas adelante.
-  const [curveSmoothing, setCurveSmoothing] = useState(75);
-  const [colorThreshold, setColorThreshold] = useState(60);
   const [openHint, setOpenHint] = useState<string | null>(null);
   const [hintTop, setHintTop] = useState(0);
   const asideRef = useRef<HTMLElement>(null);
@@ -139,9 +155,35 @@ export default function SettingsPanel({
             onChange={setDetail}
             className="mt-3"
           />
-          <label className="mt-4 block text-xs font-bold text-[#0C1330]">
+          <div className="my-4 hairline" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="auto-smoothing"
+                className="text-xs font-bold text-[#0C1330]"
+              >
+                Suavizado automático
+              </label>
+              <HintButton
+                id="curveSmoothing"
+                openHint={openHint}
+                onToggle={onToggleHint}
+              />
+            </div>
+            <Switch
+              id="auto-smoothing"
+              checked={autoSmoothing}
+              onCheckedChange={setAutoSmoothing}
+              {...SWITCH_STYLE}
+            />
+          </div>
+          <label
+            className={`mt-3 block text-xs font-bold ${autoSmoothing ? "text-[#B3B8C4]" : "text-[#0C1330]"}`}
+          >
             Suavizado de curvas{" "}
-            <span className="float-right text-[#0C1330]">
+            <span
+              className={`float-right ${autoSmoothing ? "text-[#B3B8C4]" : "text-[#0C1330]"}`}
+            >
               {curveSmoothing}%
             </span>
           </label>
@@ -149,17 +191,47 @@ export default function SettingsPanel({
             min={0}
             max={100}
             value={curveSmoothing}
+            disabled={autoSmoothing}
             onChange={setCurveSmoothing}
             className="mt-3"
           />
-          <label className="mt-3 block text-xs font-bold text-[#0C1330]">
+          <div className="my-4 hairline" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="auto-threshold"
+                className="text-xs font-bold text-[#0C1330]"
+              >
+                Umbral automático
+              </label>
+              <HintButton
+                id="colorThreshold"
+                openHint={openHint}
+                onToggle={onToggleHint}
+              />
+            </div>
+            <Switch
+              id="auto-threshold"
+              checked={autoThreshold}
+              onCheckedChange={setAutoThreshold}
+              {...SWITCH_STYLE}
+            />
+          </div>
+          <label
+            className={`mt-3 block text-xs font-bold ${autoThreshold ? "text-[#B3B8C4]" : "text-[#0C1330]"}`}
+          >
             Umbral de colores{" "}
-            <span className="float-right text-[#0C1330]">{colorThreshold}</span>
+            <span
+              className={`float-right ${autoThreshold ? "text-[#B3B8C4]" : "text-[#0C1330]"}`}
+            >
+              {colorThreshold}
+            </span>
           </label>
           <RangeSlider
             min={0}
             max={100}
             value={colorThreshold}
+            disabled={autoThreshold}
             onChange={setColorThreshold}
             className="mt-3"
           />

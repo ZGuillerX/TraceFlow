@@ -229,6 +229,7 @@ export default function PreviewCanvas({
             rightLabel="SVG (Vista previa)"
             rightBadge="Vector"
             checkerboard={mode !== "paths"}
+            onClose={onRemove}
           >
             <div
               className="h-full w-full p-6 [&_svg]:h-full [&_svg]:w-full [&_svg]:object-contain"
@@ -239,7 +240,12 @@ export default function PreviewCanvas({
             )}
           </CompareSlider>
         ) : tool === "remove-bg" && removedBgUrl && file ? (
-          <CompareSlider file={file} rightLabel="Sin fondo" rightBadge="PNG">
+          <CompareSlider
+            file={file}
+            rightLabel="Sin fondo"
+            rightBadge="PNG"
+            onClose={onRemove}
+          >
             <img
               src={removedBgUrl}
               alt="Imagen sin fondo"
@@ -251,6 +257,14 @@ export default function PreviewCanvas({
             <div className="font-technical absolute left-4 top-4 z-10 bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.15em] text-[#0C1330] shadow-sm">
               Vista previa
             </div>
+            <button
+              onClick={onRemove}
+              disabled={processing}
+              aria-label="Quitar imagen"
+              className="absolute right-4 top-4 z-10 flex h-7 w-7 items-center justify-center bg-white/90 text-[#0C1330] shadow-sm hover:bg-[#0C1330] hover:text-white disabled:opacity-40"
+            >
+              <X size={13} />
+            </button>
             <img
               src={previewUrl}
               alt={file.name}

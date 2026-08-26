@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { X } from "lucide-react";
 
 interface CompareSliderProps {
   file: File;
   rightLabel: string;
   rightBadge?: string;
   checkerboard?: boolean;
+  onClose?: () => void;
   children: ReactNode;
 }
 
@@ -18,6 +20,7 @@ export default function CompareSlider({
   rightLabel,
   rightBadge,
   checkerboard = true,
+  onClose,
   children,
 }: CompareSliderProps) {
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
@@ -71,6 +74,15 @@ export default function CompareSlider({
             {rightBadge}
           </span>
         )}
+        {onClose && (
+          <button
+            onClick={onClose}
+            aria-label="Cerrar vista previa"
+            className="flex h-7 w-7 items-center justify-center bg-white/90 text-[#0C1330] shadow-sm hover:bg-[#0C1330] hover:text-white"
+          >
+            <X size={13} />
+          </button>
+        )}
       </div>
 
       {originalUrl && (
@@ -78,6 +90,7 @@ export default function CompareSlider({
           src={originalUrl}
           alt="Original"
           className="absolute inset-0 h-full w-full object-contain p-6"
+          style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}
         />
       )}
 

@@ -112,6 +112,10 @@ async def api_vectorize(
     colors: int = Form(8),
     remove_bg: bool = Form(False),
     auto_colors: bool = Form(True),
+    curve_smoothing: float = Form(75),
+    auto_smoothing: bool = Form(True),
+    color_threshold: float = Form(60),
+    auto_threshold: bool = Form(True),
 ):
     key = client_key(request)
     vectorize_burst_limiter.check(key)
@@ -121,7 +125,12 @@ async def api_vectorize(
     if error:
         raise HTTPException(400, error)
 
-    params = detail_to_params(detail, colors)
+    params = detail_to_params(
+        detail,
+        colors,
+        None if auto_smoothing else curve_smoothing,
+        None if auto_threshold else color_threshold,
+    )
     suffix = Path(file.filename or "input.png").suffix or ".png"
 
     label = f"POST /api/vectorize ({len(source_bytes) // 1024}KB, remove_bg={remove_bg}, auto_colors={auto_colors})"
@@ -141,6 +150,10 @@ async def api_vectorize_stream(
     colors: int = Form(8),
     remove_bg: bool = Form(False),
     auto_colors: bool = Form(True),
+    curve_smoothing: float = Form(75),
+    auto_smoothing: bool = Form(True),
+    color_threshold: float = Form(60),
+    auto_threshold: bool = Form(True),
 ):
     """Igual que /api/vectorize, pero mandando cada etapa del pipeline
     (original, ampliada, sin fondo/colores, resultado final) segun se
@@ -154,7 +167,12 @@ async def api_vectorize_stream(
     if error:
         raise HTTPException(400, error)
 
-    params = detail_to_params(detail, colors)
+    params = detail_to_params(
+        detail,
+        colors,
+        None if auto_smoothing else curve_smoothing,
+        None if auto_threshold else color_threshold,
+    )
     suffix = Path(file.filename or "input.png").suffix or ".png"
 
     async def event_stream():
