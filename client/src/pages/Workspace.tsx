@@ -1,5 +1,5 @@
 /* TraceFlow / Vector Atelier: Studio de vectorización con look de editor profesional. */
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import StudioTopBar from "@/components/studio/StudioTopBar";
 import InspectorPanel from "@/components/studio/InspectorPanel";
 import PreviewCanvas, {
@@ -7,48 +7,27 @@ import PreviewCanvas, {
 } from "@/components/workspace/PreviewCanvas";
 import SettingsPanel from "@/components/workspace/SettingsPanel";
 import { toast } from "sonner";
-import {
-  removeBackgroundApi,
-  vectorizeImageStream,
-  type RemoveBgQuality,
-} from "@/lib/api";
+import { useBackgroundRemovalTool } from "@/hooks/useBackgroundRemovalTool";
+import { useVectorizeFlow } from "@/hooks/useVectorizeFlow";
+import { useVectorizeParams } from "@/hooks/useVectorizeParams";
 import { downloadBlob, downloadUrl } from "@/lib/download";
-import { detectColors, recolorSvg } from "@/lib/recolor";
 
 export default function Workspace() {
   const input = useRef<HTMLInputElement>(null);
   const [tool, setTool] = useState<StudioTool>("vectorize");
   const [file, setFile] = useState<File | null>(null);
-  const [svg, setSvg] = useState<string | null>(null);
-  const [bgHex, setBgHex] = useState<string | null>(null);
-  const [detail, setDetail] = useState(72);
-  const [colors, setColors] = useState(8);
-  const [autoColors, setAutoColors] = useState(true);
-  const [curveSmoothing, setCurveSmoothing] = useState(75);
-  const [autoSmoothing, setAutoSmoothing] = useState(true);
-  const [colorThreshold, setColorThreshold] = useState(60);
-  const [autoThreshold, setAutoThreshold] = useState(true);
-  const [removeBg, setRemoveBg] = useState(false);
-  const [bgQuality, setBgQuality] = useState<RemoveBgQuality>("high");
-  const [removingBg, setRemovingBg] = useState(false);
-  const [removedBgUrl, setRemovedBgUrl] = useState<string | null>(null);
-  const [colorOverrides, setColorOverrides] = useState<Record<string, string>>(
-    {}
-  );
   const [mode, setMode] = useState<"preview" | "paths">("preview");
-  const [processing, setProcessing] = useState(false);
-  const [currentStage, setCurrentStage] = useState<string | null>(null);
-  const abortController = useRef<AbortController | null>(null);
+
+  const params = useVectorizeParams();
+  const flow = useVectorizeFlow(file, params);
+  const bgTool = useBackgroundRemovalTool(file);
+
   const choose = () => input.current?.click();
-  const clearRemovedBg = () => {
-    if (removedBgUrl) URL.revokeObjectURL(removedBgUrl);
-    setRemovedBgUrl(null);
-  };
   const loadFile = (f: File | undefined) => {
     if (f) {
       setFile(f);
-      setSvg(null);
-      clearRemovedBg();
+      flow.reset();
+      bgTool.clearRemovedBg();
       toast.success("Imagen cargada. Ajusta los parámetros para continuar.");
     }
   };
@@ -56,98 +35,30 @@ export default function Workspace() {
     loadFile(e.target.files?.[0]);
   const removeFile = () => {
     setFile(null);
-    setSvg(null);
-    clearRemovedBg();
-    setColorOverrides({});
+    flow.reset();
+    bgTool.clearRemovedBg();
   };
-  const detectedColors = useMemo(
-    () => (svg ? detectColors(svg, bgHex) : []),
-    [svg, bgHex]
-  );
-  const displaySvg = useMemo(
-    () => (svg ? recolorSvg(svg, detectedColors, colorOverrides, bgHex) : svg),
-    [svg, detectedColors, colorOverrides, bgHex]
-  );
-  const setColorOverride = (id: string, hex: string) =>
-    setColorOverrides(prev => ({ ...prev, [id]: hex }));
-  const process = async () => {
-    if (!file) return toast.info("Carga una imagen primero.");
-    const controller = new AbortController();
-    abortController.current = controller;
-    setProcessing(true);
-    setCurrentStage(null);
-    try {
-      const { svg, bgHex } = await vectorizeImageStream(
-        file,
-        {
-          detail,
-          colors,
-          autoColors,
-          removeBg,
-          curveSmoothing,
-          autoSmoothing,
-          colorThreshold,
-          autoThreshold,
-        },
-        stage => setCurrentStage(stage.stage),
-        controller.signal
-      );
-      setSvg(svg);
-      setBgHex(bgHex);
-      setColorOverrides({});
-      toast.success("Preview vectorial actualizada.");
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        toast.info("Vectorización cancelada.");
-      } else {
-        toast.error(
-          err instanceof Error
-            ? err.message
-            : "No se pudo vectorizar la imagen. Intenta de nuevo."
-        );
-      }
-    } finally {
-      setProcessing(false);
-      abortController.current = null;
-    }
-  };
-  const cancel = () => abortController.current?.abort();
-  const removeBackground = async () => {
-    if (!file) return toast.info("Carga una imagen primero.");
-    setRemovingBg(true);
-    try {
-      const blob = await removeBackgroundApi(file, bgQuality);
-      clearRemovedBg();
-      setRemovedBgUrl(URL.createObjectURL(blob));
-      toast.success("Fondo eliminado.");
-    } catch (err) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : "No se pudo quitar el fondo. Intenta de nuevo."
-      );
-    } finally {
-      setRemovingBg(false);
-    }
-  };
+
   const downloadRemovedBg = () => {
-    if (!removedBgUrl) return toast.info("Quita el fondo primero.");
+    if (!bgTool.removedBgUrl) return toast.info("Quita el fondo primero.");
     downloadUrl(
-      removedBgUrl,
+      bgTool.removedBgUrl,
       (file?.name.replace(/\.[^.]+$/, "") || "traceflow") + "-sin-fondo.png"
     );
     toast.success("Exportación PNG lista.");
   };
   const download = () => {
-    if (!displaySvg) return toast.info("Genera una preview para exportar.");
+    if (!flow.displaySvg)
+      return toast.info("Genera una preview para exportar.");
     downloadBlob(
-      new Blob([displaySvg], { type: "image/svg+xml" }),
+      new Blob([flow.displaySvg], { type: "image/svg+xml" }),
       (file?.name.replace(/\.[^.]+$/, "") || "traceflow") +
-        (removeBg ? "-sin-fondo" : "") +
+        (params.removeBg ? "-sin-fondo" : "") +
         ".svg"
     );
     toast.success("Exportación SVG lista.");
   };
+
   return (
     <div className="flex min-h-screen flex-col bg-[#FAF9F5] text-[#0C1330] lg:h-screen lg:overflow-hidden">
       <StudioTopBar />
@@ -156,24 +67,24 @@ export default function Workspace() {
           <SettingsPanel
             tool={tool}
             setTool={setTool}
-            detail={detail}
-            setDetail={setDetail}
-            autoColors={autoColors}
-            setAutoColors={setAutoColors}
-            colors={colors}
-            setColors={setColors}
-            curveSmoothing={curveSmoothing}
-            setCurveSmoothing={setCurveSmoothing}
-            autoSmoothing={autoSmoothing}
-            setAutoSmoothing={setAutoSmoothing}
-            colorThreshold={colorThreshold}
-            setColorThreshold={setColorThreshold}
-            autoThreshold={autoThreshold}
-            setAutoThreshold={setAutoThreshold}
-            removeBg={removeBg}
-            setRemoveBg={setRemoveBg}
-            bgQuality={bgQuality}
-            setBgQuality={setBgQuality}
+            detail={params.detail}
+            setDetail={params.setDetail}
+            autoColors={params.autoColors}
+            setAutoColors={params.setAutoColors}
+            colors={params.colors}
+            setColors={params.setColors}
+            curveSmoothing={params.curveSmoothing}
+            setCurveSmoothing={params.setCurveSmoothing}
+            autoSmoothing={params.autoSmoothing}
+            setAutoSmoothing={params.setAutoSmoothing}
+            colorThreshold={params.colorThreshold}
+            setColorThreshold={params.setColorThreshold}
+            autoThreshold={params.autoThreshold}
+            setAutoThreshold={params.setAutoThreshold}
+            removeBg={params.removeBg}
+            setRemoveBg={params.setRemoveBg}
+            bgQuality={bgTool.bgQuality}
+            setBgQuality={bgTool.setBgQuality}
           />
         </div>
         <div className="lg:overflow-y-auto">
@@ -181,34 +92,34 @@ export default function Workspace() {
             input={input}
             tool={tool}
             file={file}
-            svg={svg}
-            displaySvg={displaySvg}
+            svg={flow.svg}
+            displaySvg={flow.displaySvg}
             mode={mode}
             setMode={setMode}
             choose={choose}
             onFile={onFile}
             onDropFile={loadFile}
             onRemove={removeFile}
-            processing={processing}
-            currentStage={currentStage}
-            cancel={cancel}
-            removingBg={removingBg}
-            removedBgUrl={removedBgUrl}
-            detectedColors={detectedColors}
-            colorOverrides={colorOverrides}
-            setColorOverride={setColorOverride}
+            processing={flow.processing}
+            currentStage={flow.currentStage}
+            cancel={flow.cancel}
+            removingBg={bgTool.removingBg}
+            removedBgUrl={bgTool.removedBgUrl}
+            detectedColors={flow.detectedColors}
+            colorOverrides={flow.colorOverrides}
+            setColorOverride={flow.setColorOverride}
           />
         </div>
         <InspectorPanel
           tool={tool}
-          svg={svg}
+          svg={flow.svg}
           download={download}
-          process={process}
-          processing={processing}
-          removedBgUrl={removedBgUrl}
+          process={flow.process}
+          processing={flow.processing}
+          removedBgUrl={bgTool.removedBgUrl}
           downloadRemovedBg={downloadRemovedBg}
-          removeBackground={removeBackground}
-          removingBg={removingBg}
+          removeBackground={bgTool.removeBackground}
+          removingBg={bgTool.removingBg}
         />
       </div>
     </div>
