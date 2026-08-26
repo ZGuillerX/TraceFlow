@@ -50,6 +50,13 @@ class RateLimiter:
             for k in stale:
                 del self._hits[k]
 
+    def reset(self) -> None:
+        """Vacia todos los contadores. Solo para tests: entre tests que
+        comparten el mismo limiter (singletons a nivel de modulo), sin
+        esto un test agotaria el cupo de los siguientes."""
+        with self._lock:
+            self._hits.clear()
+
 
 def client_key(request: Request) -> str:
     """IP real del cliente, respetando X-Forwarded-For si el servidor

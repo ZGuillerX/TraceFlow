@@ -6,6 +6,7 @@ from typing import Iterator, TypedDict
 
 from PIL import Image
 
+from core.timing import log_duration
 from pipeline.flat_background import (
     binarize_alpha,
     has_existing_transparency,
@@ -14,7 +15,6 @@ from pipeline.flat_background import (
 from pipeline.quantize import detect_color_count, quantize_colors, smooth_flat_edges
 from pipeline.upscale import upscale_if_small
 from pipeline.vectorize import vectorize
-from timing import log_duration
 
 
 class VectorizeStage(TypedDict, total=False):
@@ -46,8 +46,9 @@ def run_vectorize_stages(
     del proceso), terminando con la etapa "final" que trae el SVG.
 
     Trabajo sincrono (bloqueante) -- pensado para consumirse desde un
-    hilo aparte (ver _stream_stages en routes.py), para no congelar el
-    event loop de FastAPI mientras vtracer/rembg procesan la imagen.
+    hilo aparte (ver _stream_stages en api/routers/vectorize.py), para
+    no congelar el event loop de FastAPI mientras vtracer/rembg
+    procesan la imagen.
     """
     yield {"stage": "original", "image": source_bytes}
 

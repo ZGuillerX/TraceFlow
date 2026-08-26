@@ -1,4 +1,4 @@
-from config import MAX_UPLOAD_SIZE_BYTES
+from core.config import MAX_UPLOAD_SIZE_BYTES
 
 IMAGE_SIGNATURES = {
     "image/png": [b"\x89PNG\r\n\x1a\n"],

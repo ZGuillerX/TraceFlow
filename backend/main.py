@@ -5,8 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from config import CORS_ALLOWED_ORIGINS
-from routes import router
+from api.router import router
+from core.config import CORS_ALLOWED_ORIGINS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 

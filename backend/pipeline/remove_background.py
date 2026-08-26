@@ -5,7 +5,7 @@ from typing import Literal
 import onnxruntime as ort
 from rembg import new_session, remove
 
-from timing import log_duration
+from core.timing import log_duration
 
 Quality = Literal["fast", "high"]
 

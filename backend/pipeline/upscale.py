@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-from timing import log_duration
+from core.timing import log_duration
 
 MODEL_NAME = "eugenesiow/edsr-base"
 MODEL_SCALE = 4

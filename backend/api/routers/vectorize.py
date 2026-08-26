@@ -7,35 +7,31 @@ from typing import AsyncIterator, Iterator
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response, StreamingResponse
 
-from config import (
+from core.config import (
     PROCESSING_TIMEOUT_SECONDS,
     RATE_LIMIT_MAX_REQUESTS,
     RATE_LIMIT_WINDOW_SECONDS,
     VECTORIZE_BURST_MAX_REQUESTS,
     VECTORIZE_BURST_WINDOW_SECONDS,
 )
-from pipeline.remove_background import Quality, remove_background
+from core.rate_limit import RateLimiter, client_key
+from core.timeout import with_timeout
+from core.timing import log_duration
 from pipeline.validation import validate_image
 from pipeline.vectorize import detail_to_params
-from rate_limit import RateLimiter, client_key
-from timing import log_duration
-from vectorize_service import VectorizeStage, run_vectorize, run_vectorize_stages
+from services.vectorize_service import (
+    VectorizeStage,
+    run_vectorize,
+    run_vectorize_stages,
+)
 
 vectorize_limiter = RateLimiter(RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_SECONDS)
-remove_bg_limiter = RateLimiter(RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_SECONDS)
 # limite de rafaga corta, ademas del de arriba -- ver comentario junto
 # a VECTORIZE_BURST_MAX_REQUESTS en config.py. Compartido entre
 # /api/vectorize y /api/vectorize/stream: mismo pipeline pesado.
 vectorize_burst_limiter = RateLimiter(VECTORIZE_BURST_MAX_REQUESTS, VECTORIZE_BURST_WINDOW_SECONDS)
 
 router = APIRouter()
-
-
-async def with_timeout(coro):
-    try:
-        return await asyncio.wait_for(coro, timeout=PROCESSING_TIMEOUT_SECONDS)
-    except asyncio.TimeoutError as e:
-        raise HTTPException(504, "La imagen tardo demasiado en procesarse. Prueba con una imagen mas simple.") from e
 
 
 _STREAM_DONE = object()
@@ -181,21 +177,3 @@ async def api_vectorize_stream(
             yield _format_sse(stage)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
-
-
-@router.post("/api/remove-background")
-async def api_remove_background(
-    request: Request,
-    file: UploadFile = File(...),
-    quality: Quality = Form("high"),
-):
-    remove_bg_limiter.check(client_key(request))
-    source_bytes = await file.read()
-    error = validate_image(file.content_type, source_bytes)
-    if error:
-        raise HTTPException(400, error)
-
-    label = f"POST /api/remove-background ({len(source_bytes) // 1024}KB, quality={quality})"
-    with log_duration(label):
-        png_bytes = await with_timeout(asyncio.to_thread(remove_background, source_bytes, quality))
-    return Response(content=png_bytes, media_type="image/png")
