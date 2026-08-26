@@ -1,6 +1,5 @@
-import { cn } from "@/lib/utils";
 import { AlertTriangle, RotateCcw } from "lucide-react";
-import { Component, ReactNode } from "react";
+import { Component, type ReactNode } from "react";
 
 interface Props {
   children: ReactNode;
@@ -24,31 +23,29 @@ class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center min-h-screen p-8 bg-background">
-          <div className="flex flex-col items-center w-full max-w-2xl p-8">
+        <div className="flex min-h-screen items-center justify-center bg-[#FAF9F5] p-8 text-[#0C1330]">
+          <div className="flex w-full max-w-2xl flex-col items-center border border-[#DEDDD3] bg-white p-8 shadow-[0_18px_50px_rgba(12,19,48,.06)]">
             <AlertTriangle
               size={48}
-              className="text-destructive mb-6 flex-shrink-0"
+              className="mb-6 shrink-0 text-[#1652F5]"
             />
 
-            <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
+            <h2 className="font-display text-xl text-[#0C1330]">
+              Ocurrió un error inesperado.
+            </h2>
 
-            <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
-              <pre className="text-sm text-muted-foreground whitespace-break-spaces">
+            <div className="mb-6 mt-6 w-full overflow-auto border border-[#DEDDD3] bg-[#F4F3ED] p-4">
+              <pre className="whitespace-break-spaces text-sm text-[#7A8194]">
                 {this.state.error?.stack}
               </pre>
             </div>
 
             <button
               onClick={() => window.location.reload()}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg",
-                "bg-primary text-primary-foreground",
-                "hover:opacity-90 cursor-pointer"
-              )}
+              className="button-press flex items-center gap-2 bg-[#0C1330] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#18234f]"
             >
               <RotateCcw size={16} />
-              Reload Page
+              Recargar página
             </button>
           </div>
         </div>
