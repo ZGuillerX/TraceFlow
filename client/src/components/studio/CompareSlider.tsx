@@ -89,6 +89,7 @@ export default function CompareSlider({
         <img
           src={originalUrl}
           alt="Original"
+          draggable={false}
           className="absolute inset-0 h-full w-full object-contain p-6"
           style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}
         />

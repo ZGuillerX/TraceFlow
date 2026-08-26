@@ -204,6 +204,7 @@ export default function PreviewCanvas({
                 <img
                   src={previewUrl}
                   alt=""
+                  draggable={false}
                   className="checkerboard h-7 w-7 shrink-0 border border-[#E3E2D9] object-cover"
                 />
               )}
@@ -313,6 +314,7 @@ export default function PreviewCanvas({
                 <img
                   src={removedBgUrl}
                   alt="Imagen sin fondo"
+                  draggable={false}
                   className="h-full w-full object-contain p-6"
                 />
               </CompareSlider>
@@ -334,6 +336,7 @@ export default function PreviewCanvas({
                   <img
                     src={previewUrl}
                     alt={file.name}
+                    draggable={false}
                     className="h-full w-full object-contain p-6"
                   />
                 </div>
