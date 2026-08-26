@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Eraser, HelpCircle, Info, Wand2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import QualitySelector from "./QualitySelector";
 import RangeSlider from "./RangeSlider";
 import type { RemoveBgQuality } from "@/lib/api";
 import type { StudioTool } from "./PreviewCanvas";
@@ -321,20 +322,12 @@ export default function SettingsPanel({
               onToggle={onToggleHint}
             />
           </div>
-          <div className="mt-3 flex border border-[#DEDDD3] bg-white p-1">
-            <button
-              onClick={() => setBgQuality("fast")}
-              className={`flex-1 px-3 py-2 text-xs font-bold ${bgQuality === "fast" ? "bg-[#1652F5] text-white" : "text-[#7A8194]"}`}
-            >
-              Rápida
-            </button>
-            <button
-              onClick={() => setBgQuality("high")}
-              className={`flex-1 px-3 py-2 text-xs font-bold ${bgQuality === "high" ? "bg-[#1652F5] text-white" : "text-[#7A8194]"}`}
-            >
-              Alta calidad
-            </button>
-          </div>
+          <QualitySelector
+            value={bgQuality}
+            onChange={setBgQuality}
+            variant="studio"
+            className="mt-3"
+          />
         </>
       )}
 

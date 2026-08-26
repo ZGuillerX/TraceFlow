@@ -11,6 +11,7 @@ import { useBackgroundRemovalTool } from "@/hooks/useBackgroundRemovalTool";
 import { useVectorizeFlow } from "@/hooks/useVectorizeFlow";
 import { useVectorizeParams } from "@/hooks/useVectorizeParams";
 import { downloadBlob, downloadUrl } from "@/lib/download";
+import { commitFileLoad } from "@/lib/loadFile";
 
 export default function Workspace() {
   const input = useRef<HTMLInputElement>(null);
@@ -23,14 +24,16 @@ export default function Workspace() {
   const bgTool = useBackgroundRemovalTool(file);
 
   const choose = () => input.current?.click();
-  const loadFile = (f: File | undefined) => {
-    if (f) {
-      setFile(f);
-      flow.reset();
-      bgTool.clearRemovedBg();
-      toast.success("Imagen cargada. Ajusta los parámetros para continuar.");
-    }
-  };
+  const loadFile = (f: File | undefined) =>
+    commitFileLoad(
+      f,
+      setFile,
+      () => {
+        flow.reset();
+        bgTool.clearRemovedBg();
+      },
+      "Imagen cargada. Ajusta los parámetros para continuar."
+    );
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) =>
     loadFile(e.target.files?.[0]);
   const removeFile = () => {

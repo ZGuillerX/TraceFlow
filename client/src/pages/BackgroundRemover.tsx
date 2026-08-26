@@ -9,6 +9,7 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
+import QualitySelector from "@/components/workspace/QualitySelector";
 import TraceFlowShell from "@/components/layout/TraceFlowShell";
 import ZoomLightbox from "@/components/layout/ZoomLightbox";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ import sample from "@/assets/sample-transform.webp";
 import { useDropzone } from "@/hooks/useDropzone";
 import { removeBackgroundApi, type RemoveBgQuality } from "@/lib/api";
 import { downloadUrl } from "@/lib/download";
+import { commitFileLoad } from "@/lib/loadFile";
 
 export default function BackgroundRemover() {
   const input = useRef<HTMLInputElement>(null);
@@ -34,15 +36,17 @@ export default function BackgroundRemover() {
     return () => clearInterval(id);
   }, [processing]);
   const choose = () => input.current?.click();
-  const loadFile = (f: File | undefined) => {
-    if (f) {
-      setFile(f);
-      setOriginalUrl(URL.createObjectURL(f));
-      setResultUrl(null);
-      setShowOriginal(false);
-      toast.success("Imagen lista para quitar el fondo.");
-    }
-  };
+  const loadFile = (f: File | undefined) =>
+    commitFileLoad(
+      f,
+      setFile,
+      loaded => {
+        setOriginalUrl(URL.createObjectURL(loaded));
+        setResultUrl(null);
+        setShowOriginal(false);
+      },
+      "Imagen lista para quitar el fondo."
+    );
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) =>
     loadFile(e.target.files?.[0]);
   const { isDragging, onDragOver, onDragLeave, onDrop } = useDropzone({
@@ -194,20 +198,12 @@ export default function BackgroundRemover() {
               <label className="text-xs font-bold text-[#101A46]">
                 Calidad
               </label>
-              <div className="mt-2 flex border border-[#dfe2ea] bg-white p-1">
-                <button
-                  onClick={() => setQuality("fast")}
-                  className={`flex-1 px-3 py-1.5 text-xs font-bold ${quality === "fast" ? "bg-[#101A46] text-white" : "text-[#7a8299]"}`}
-                >
-                  Rápida
-                </button>
-                <button
-                  onClick={() => setQuality("high")}
-                  className={`flex-1 px-3 py-1.5 text-xs font-bold ${quality === "high" ? "bg-[#101A46] text-white" : "text-[#7a8299]"}`}
-                >
-                  Alta calidad
-                </button>
-              </div>
+              <QualitySelector
+                value={quality}
+                onChange={setQuality}
+                variant="standalone"
+                className="mt-2"
+              />
               <p className="mt-2 text-[11px] leading-relaxed text-[#7a8299]">
                 {quality === "fast"
                   ? "Más rápida, puede fallar en detalles oscuros de alto contraste (ojos, sombras marcadas)."
