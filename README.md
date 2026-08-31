@@ -5,11 +5,11 @@
   TraceFlow
 </h1>
 
-[🇪🇸 Español](README.md) | 🇬🇧 English
+🇪🇸 Español | [🇬🇧 English](README.en.md)
 
-**From loose pixels to curves you can actually use.**
+**De píxeles sueltos a curvas que puedes usar.**
 
-TraceFlow converts raster images (PNG/JPG/WEBP) into clean, editable SVGs, with real control over detail level, curve smoothing, color quantization, and layer thresholds — and it can remove the background from a photo (with or without vectorizing it afterward) using an AI segmentation model.
+TraceFlow convierte imágenes raster (PNG/JPG/WEBP) en SVG limpios y editables, con control real sobre el nivel de detalle, el suavizado de curvas, la cuantización de colores y el umbral entre capas — y puede quitar el fondo de una foto (con o sin vectorizar después) usando un modelo de segmentación por IA.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
@@ -27,41 +27,41 @@ https://github.com/user-attachments/assets/9411c3a7-d9c7-46ae-b753-328339690c8d
 
 ---
 
-## Table of contents
+## Tabla de contenidos
 
-- [Features](#features)
+- [Características](#características)
 - [Stack](#stack)
-- [Project structure](#project-structure)
-- [Prerequisites](#prerequisites)
-- [Development](#development)
-- [Production build](#production-build)
-- [Configuration](#configuration)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Requisitos previos](#requisitos-previos)
+- [Desarrollo](#desarrollo)
+- [Build de producción](#build-de-producción)
+- [Configuración](#configuración)
 - [API](#api)
-- [License](#license)
+- [Licencia](#licencia)
 
 ---
 
-## Features
+## Características
 
-- 🎨 **Vectorize raster → SVG**, with a live progress preview (streamed stage by stage) and a draggable Original/Result comparator.
-- ✂️ **Background removal** with AI (`rembg` + `BiRefNet`), either as a step before vectorizing or as a standalone tool that exports a PNG with real transparency. Quality selector (fast vs. high quality).
-- 🎛️ **Fine-grained tracing control**: detail level, curve smoothing (`corner_threshold`), and color-grouping threshold (`layer_difference`), each with a calibrated automatic default.
-- 🔍 **Automatic super-resolution** for small images before vectorizing, so detail isn't lost on icons or low-res screenshots.
-- 🧩 **Inspector** with layers, real SVG properties (dimensions, file size), and the source code, copyable with one click.
+- 🎨 **Vectorizar raster → SVG**, con vista previa en vivo del progreso (por etapas, vía streaming) y un comparador deslizable Original/Resultado.
+- ✂️ **Quitar fondo** con IA (`rembg` + `BiRefNet`), como paso previo a vectorizar o como herramienta independiente que exporta PNG con transparencia real. Selector de calidad (rápida vs. alta calidad).
+- 🎛️ **Control fino del trazado**: nivel de detalle, suavizado de curvas (`corner_threshold`) y umbral de agrupación de colores (`layer_difference`), cada uno con un modo automático calibrado por defecto.
+- 🔍 **Súper-resolución automática** para imágenes chicas antes de vectorizar, para no perder detalle en iconos o capturas de baja resolución.
+- 🧩 **Inspector** con capas, propiedades reales del SVG (dimensiones, peso) y el código fuente, copiable con un clic.
 
 ---
 
 ## Stack
 
-| Layer | Technologies |
+| Capa | Tecnologías |
 | --- | --- |
-| **Frontend** | React 19 · Vite · TypeScript · Tailwind CSS 4 · `shadcn/ui` on top of Radix UI · `wouter` (routing) · `sonner` (notifications) |
-| **Backend** | Python · FastAPI · [`vtracer`](https://github.com/visioncortex/vtracer) (vectorization) · `rembg` / `BiRefNet` via ONNX Runtime (background removal) · `super-image` (EDSR, super-resolution) |
-| **Package management** | `pnpm` (frontend) · `pip` on a virtual environment (backend) |
+| **Frontend** | React 19 · Vite · TypeScript · Tailwind CSS 4 · `shadcn/ui` sobre Radix UI · `wouter` (enrutado) · `sonner` (notificaciones) |
+| **Backend** | Python · FastAPI · [`vtracer`](https://github.com/visioncortex/vtracer) (vectorización) · `rembg` / `BiRefNet` vía ONNX Runtime (quitar fondo) · `super-image` (EDSR, súper-resolución) |
+| **Gestión de paquetes** | `pnpm` (frontend) · `pip` sobre entorno virtual (backend) |
 
 ---
 
-## Project structure
+## Estructura del proyecto
 
 ```
 TraceFlow/
@@ -69,41 +69,41 @@ TraceFlow/
 │   └── src/
 │       ├── pages/        # Home, Workspace (Studio), BackgroundRemover, History
 │       ├── components/
-│       │   ├── studio/   # Studio-specific components (header, comparator, inspector)
-│       │   ├── workspace/# Settings panel, preview canvas, custom slider
-│       │   └── ui/       # Base shadcn/ui components
-│       └── lib/          # API client, SVG recoloring, utilities
+│       │   ├── studio/   # Componentes propios del Studio (header, comparador, inspector)
+│       │   ├── workspace/# Panel de ajustes, lienzo de preview, slider a medida
+│       │   └── ui/       # Componentes base de shadcn/ui
+│       └── lib/          # Cliente de la API, recoloreado de SVG, utilidades
 ├── backend/              # Backend (FastAPI)
-│   ├── main.py           # Entry point: mounts the API and serves the compiled frontend
+│   ├── main.py           # Punto de entrada: monta la API y sirve el frontend compilado
 │   ├── api/
-│   │   └── routers/      # HTTP endpoints (vectorize, remove background)
-│   ├── services/         # Pipeline orchestration by stage
-│   ├── core/             # Config, rate limiting, timeouts, logging, security
-│   ├── pipeline/         # Individual steps: vectorize, remove background, quantize, scale, validate
-│   └── tests/            # pytest (see backend README for tests if applicable)
-└── dist/                  # Production frontend build (generated, not versioned)
+│   │   └── routers/      # Endpoints HTTP (vectorizar, quitar fondo)
+│   ├── services/         # Orquestación del pipeline por etapas
+│   ├── core/             # Config, rate limiting, timeouts, logging, seguridad
+│   ├── pipeline/         # Pasos individuales: vectorizar, quitar fondo, cuantizar, escalar, validar
+│   └── tests/            # pytest (backend/README de tests si aplica)
+└── dist/                  # Build de producción del frontend (generado, no versionado)
 ```
 
 ---
 
-## Prerequisites
+## Requisitos previos
 
-- [Node.js](https://nodejs.org/) 20+ and [pnpm](https://pnpm.io/) (`corepack enable` enables `pnpm` on Node 20+ without installing it separately).
-- Python 3.11+ and `pip`.
+- [Node.js](https://nodejs.org/) 20+ y [pnpm](https://pnpm.io/) (`corepack enable` habilita `pnpm` en Node 20+ sin instalarlo aparte).
+- Python 3.11+ y `pip`.
 
 ---
 
-## Development
+## Desarrollo
 
 ### Backend
 
-From the project root:
+Desde la raíz del proyecto:
 
 ```bash
-py -m venv .venv                        # first time only
+py -m venv .venv                        # solo la primera vez
 ```
 
-Activate the virtual environment (pick the command for your shell):
+Activar el entorno virtual (elige el comando de tu shell):
 
 ```bash
 # PowerShell
@@ -113,7 +113,7 @@ Activate the virtual environment (pick the command for your shell):
 source .venv/Scripts/activate
 ```
 
-Install dependencies and start the dev server with auto-reload:
+Instalar dependencias y arrancar el servidor con recarga automática:
 
 ```bash
 cd backend
@@ -121,31 +121,31 @@ python -m pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-> The first call to remove background loads the BiRefNet model into memory (can take up to a minute on CPU); subsequent requests are much faster because the model stays cached.
+> El primer llamado a quitar fondo carga el modelo BiRefNet en memoria (puede tardar hasta un minuto en CPU); las siguientes peticiones son mucho más rápidas porque el modelo queda cacheado.
 
 ### Frontend
 
-In another terminal, from the project root:
+En otra terminal, desde la raíz del proyecto:
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-Open **http://localhost:5173** — the Vite proxy forwards requests to `/api/*` to the backend on port 8000, so both processes need to be running at the same time during development.
+Abre **http://localhost:5173** — el proxy de Vite reenvía las peticiones a `/api/*` hacia el backend en el puerto 8000, así que ambos procesos deben estar corriendo a la vez durante el desarrollo.
 
-### Available scripts
+### Scripts disponibles
 
-| Command | What it does |
+| Comando | Qué hace |
 | --- | --- |
-| `pnpm dev` | Starts the frontend in development mode with hot reload. |
-| `pnpm check` | Type-checks TypeScript without emitting files (`tsc --noEmit`). |
-| `pnpm test` | Runs the frontend test suite with Vitest. |
-| `pnpm format` | Formats the project with Prettier. |
-| `pnpm build` | Builds the production frontend into `dist/`. |
-| `pnpm preview` | Serves the `dist/` build locally, to test it before deploying. |
+| `pnpm dev` | Arranca el frontend en modo desarrollo con recarga en caliente. |
+| `pnpm check` | Verifica tipos de TypeScript sin emitir archivos (`tsc --noEmit`). |
+| `pnpm test` | Corre la suite de tests del frontend con Vitest. |
+| `pnpm format` | Formatea el proyecto con Prettier. |
+| `pnpm build` | Compila el frontend de producción a `dist/`. |
+| `pnpm preview` | Sirve el build de `dist/` localmente, para probarlo antes de desplegar. |
 
-The backend uses [`ruff`](https://docs.astral.sh/ruff/) for linting (configured in `backend/pyproject.toml`). It's not a project dependency (it's not in `requirements.txt`), so install it separately if you want to run it:
+El backend usa [`ruff`](https://docs.astral.sh/ruff/) para *lint* (configurado en `backend/pyproject.toml`). No es una dependencia del proyecto (no está en `requirements.txt`), así que instálalo aparte si quieres correrlo:
 
 ```bash
 python -m pip install ruff
@@ -155,7 +155,7 @@ python -m ruff check .
 
 ---
 
-## Production build
+## Build de producción
 
 ```bash
 pnpm build
@@ -163,47 +163,47 @@ cd backend
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-FastAPI detects the `dist/` folder and serves the compiled frontend and the API from the same process — no separate static file server needed.
+FastAPI detecta la carpeta `dist/` y sirve el frontend compilado y la API desde el mismo proceso — no hace falta un servidor separado para archivos estáticos.
 
 ---
 
-## Configuration
+## Configuración
 
-The backend's limits and timeouts live in `backend/core/config.py`:
+Los límites y tiempos de espera del backend viven en `backend/core/config.py`:
 
-| Variable | Description |
+| Variable | Descripción |
 | --- | --- |
-| `CORS_ALLOWED_ORIGINS` | Origins allowed to call the API. In development it defaults to `localhost:5173`; in production, set it via the `TRACEFLOW_CORS_ORIGINS` environment variable (comma-separated list, e.g. `TRACEFLOW_CORS_ORIGINS=https://traceflow.app,https://www.traceflow.app`). |
-| `PROCESSING_TIMEOUT_SECONDS` | Maximum time per vectorize/background-removal request (covers the model's cold start). |
-| `MAX_UPLOAD_SIZE_BYTES` | Maximum accepted file size. |
-| `MAX_IMAGE_PIXELS` | Maximum accepted resolution (width × height), a safeguard against images with a resolution disproportionate to their file size. |
-| `RATE_LIMIT_MAX_REQUESTS` / `RATE_LIMIT_WINDOW_SECONDS` | General per-IP request limit. |
-| `VECTORIZE_BURST_MAX_REQUESTS` / `VECTORIZE_BURST_WINDOW_SECONDS` | Short burst limit specific to the vectorize endpoints. |
+| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos para llamar a la API. En desarrollo usa `localhost:5173` por defecto; en producción, configúralo con la variable de entorno `TRACEFLOW_CORS_ORIGINS` (lista separada por comas, ej. `TRACEFLOW_CORS_ORIGINS=https://traceflow.app,https://www.traceflow.app`). |
+| `PROCESSING_TIMEOUT_SECONDS` | Tiempo máximo por petición de vectorizado/quitar fondo (cubre el arranque en frío del modelo). |
+| `MAX_UPLOAD_SIZE_BYTES` | Tamaño máximo de archivo aceptado. |
+| `MAX_IMAGE_PIXELS` | Resolución máxima aceptada (ancho × alto), protección contra imágenes con una resolución desproporcionada a su peso en disco. |
+| `RATE_LIMIT_MAX_REQUESTS` / `RATE_LIMIT_WINDOW_SECONDS` | Límite general de peticiones por IP. |
+| `VECTORIZE_BURST_MAX_REQUESTS` / `VECTORIZE_BURST_WINDOW_SECONDS` | Límite de ráfaga corta específico para los endpoints de vectorizado. |
 
-The backend responds with basic HTTP security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) on every response, and logs (without exposing to the client) any unhandled exception from the pipeline.
+El backend responde con headers de seguridad HTTP básicos (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) en toda respuesta, y loguea (sin exponer al cliente) cualquier excepción no anticipada del pipeline.
 
 ---
 
 ## API
 
-All endpoints receive the image as `multipart/form-data` under the `file` field.
+Todos los endpoints reciben la imagen como `multipart/form-data` bajo el campo `file`.
 
-| Endpoint | Description |
+| Endpoint | Descripción |
 | --- | --- |
-| `POST /api/vectorize` | Vectorizes the image and returns the full SVG in a single response. |
-| `POST /api/vectorize/stream` | Same, but streams each pipeline stage via server-sent events as it completes (for the live progress bar). |
-| `POST /api/remove-background` | Removes the background with AI and returns a PNG with real transparency. Accepts `quality=fast\|high`. |
+| `POST /api/vectorize` | Vectoriza la imagen y devuelve el SVG completo en una sola respuesta. |
+| `POST /api/vectorize/stream` | Igual, pero transmite cada etapa del pipeline por *server-sent events* según se completa (para la barra de progreso en vivo). |
+| `POST /api/remove-background` | Quita el fondo con IA y devuelve un PNG con transparencia real. Acepta `quality=fast\|high`. |
 
 ---
 
-## License
+## Licencia
 
-MIT — see [LICENSE](LICENSE).
+MIT — ver [LICENSE](LICENSE).
 
 ---
 
 <div align="center">
 
-Made with 🧠 and Bézier curves · [Report a bug](../../issues) · [Request a feature](../../issues)
+Hecho con 🧠 y curvas de Bézier · [Reportar un bug](../../issues) · [Solicitar una función](../../issues)
 
 </div>
