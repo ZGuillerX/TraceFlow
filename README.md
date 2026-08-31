@@ -1,20 +1,63 @@
-# TraceFlow
+<div align="center">
 
-De píxeles sueltos a curvas que puedes usar. TraceFlow convierte imágenes raster (PNG/JPG/WEBP) en SVG limpios y editables, con control real sobre el nivel de detalle, el suavizado de curvas, la cuantización de colores y el umbral entre capas — y puede quitar el fondo de una foto (con o sin vectorizar después) usando un modelo de segmentación por IA.
+
+<div align="center"> <h1> <img width="60" valign="middle" alt="traceflow-logo-2-pixel-curves-removebg-preview" src="https://github.com/user-attachments/assets/064c90ff-6f2d-4a1f-9676-e80ad1ff6f45" /> TraceFlow </h1>
+
+
+
+**De píxeles sueltos a curvas que puedes usar.**
+
+TraceFlow convierte imágenes raster (PNG/JPG/WEBP) en SVG limpios y editables, con control real sobre el nivel de detalle, el suavizado de curvas, la cuantización de colores y el umbral entre capas — y puede quitar el fondo de una foto (con o sin vectorizar después) usando un modelo de segmentación por IA.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
+
+</div>
+
+---
+
+## Demo
+
+https://github.com/user-attachments/assets/9411c3a7-d9c7-46ae-b753-328339690c8d
+
+---
+
+## Tabla de contenidos
+
+- [Características](#características)
+- [Stack](#stack)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Requisitos previos](#requisitos-previos)
+- [Desarrollo](#desarrollo)
+- [Build de producción](#build-de-producción)
+- [Configuración](#configuración)
+- [API](#api)
+- [Licencia](#licencia)
+
+---
 
 ## Características
 
-- **Vectorizar raster → SVG**, con vista previa en vivo del progreso (por etapas, vía streaming) y un comparador deslizable Original/Resultado.
-- **Quitar fondo** con IA (`rembg` + `BiRefNet`), como paso previo a vectorizar o como herramienta independiente que exporta PNG con transparencia real. Selector de calidad (rápida vs. alta calidad).
-- **Control fino del trazado**: nivel de detalle, suavizado de curvas (`corner_threshold`) y umbral de agrupación de colores (`layer_difference`), cada uno con un modo automático calibrado por defecto.
-- **Súper-resolución automática** para imágenes chicas antes de vectorizar, para no perder detalle en iconos o capturas de baja resolución.
-- **Inspector** con capas, propiedades reales del SVG (dimensiones, peso) y el código fuente, copiable con un clic.
+- 🎨 **Vectorizar raster → SVG**, con vista previa en vivo del progreso (por etapas, vía streaming) y un comparador deslizable Original/Resultado.
+- ✂️ **Quitar fondo** con IA (`rembg` + `BiRefNet`), como paso previo a vectorizar o como herramienta independiente que exporta PNG con transparencia real. Selector de calidad (rápida vs. alta calidad).
+- 🎛️ **Control fino del trazado**: nivel de detalle, suavizado de curvas (`corner_threshold`) y umbral de agrupación de colores (`layer_difference`), cada uno con un modo automático calibrado por defecto.
+- 🔍 **Súper-resolución automática** para imágenes chicas antes de vectorizar, para no perder detalle en iconos o capturas de baja resolución.
+- 🧩 **Inspector** con capas, propiedades reales del SVG (dimensiones, peso) y el código fuente, copiable con un clic.
+
+---
 
 ## Stack
 
-- **Frontend:** React 19 + Vite + TypeScript + Tailwind CSS 4 (componentes `shadcn/ui` sobre Radix UI, enrutado con `wouter`, notificaciones con `sonner`).
-- **Backend:** Python + FastAPI, con [`vtracer`](https://github.com/visioncortex/vtracer) para la vectorización, `rembg`/`BiRefNet` (ONNX Runtime) para quitar fondo, y un modelo de súper-resolución (EDSR, vía `super-image`) que agranda imágenes pequeñas antes de procesarlas.
-- **Gestor de paquetes:** `pnpm` (frontend) y `pip` sobre un entorno virtual (backend).
+| Capa | Tecnologías |
+| --- | --- |
+| **Frontend** | React 19 · Vite · TypeScript · Tailwind CSS 4 · `shadcn/ui` sobre Radix UI · `wouter` (enrutado) · `sonner` (notificaciones) |
+| **Backend** | Python · FastAPI · [`vtracer`](https://github.com/visioncortex/vtracer) (vectorización) · `rembg` / `BiRefNet` vía ONNX Runtime (quitar fondo) · `super-image` (EDSR, súper-resolución) |
+| **Gestión de paquetes** | `pnpm` (frontend) · `pip` sobre entorno virtual (backend) |
+
+---
 
 ## Estructura del proyecto
 
@@ -39,10 +82,14 @@ TraceFlow/
 └── dist/                  # Build de producción del frontend (generado, no versionado)
 ```
 
+---
+
 ## Requisitos previos
 
 - [Node.js](https://nodejs.org/) 20+ y [pnpm](https://pnpm.io/) (`corepack enable` habilita `pnpm` en Node 20+ sin instalarlo aparte).
 - Python 3.11+ y `pip`.
+
+---
 
 ## Desarrollo
 
@@ -104,6 +151,8 @@ cd backend
 python -m ruff check .
 ```
 
+---
+
 ## Build de producción
 
 ```bash
@@ -114,18 +163,24 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 FastAPI detecta la carpeta `dist/` y sirve el frontend compilado y la API desde el mismo proceso — no hace falta un servidor separado para archivos estáticos.
 
+---
+
 ## Configuración
 
 Los límites y tiempos de espera del backend viven en `backend/core/config.py`:
 
-- `CORS_ALLOWED_ORIGINS`: orígenes permitidos para llamar a la API. En desarrollo usa `localhost:5173` por defecto; en producción, configúralo con la variable de entorno `TRACEFLOW_CORS_ORIGINS` (lista de orígenes separados por comas, ej. `TRACEFLOW_CORS_ORIGINS=https://traceflow.app,https://www.traceflow.app`).
-- `PROCESSING_TIMEOUT_SECONDS`: tiempo máximo por petición de vectorizado/quitar fondo (cubre el arranque en frío del modelo).
-- `MAX_UPLOAD_SIZE_BYTES`: tamaño máximo de archivo aceptado.
-- `MAX_IMAGE_PIXELS`: resolución máxima aceptada (ancho × alto), protección contra imágenes con una resolución desproporcionada a su peso en disco.
-- `RATE_LIMIT_MAX_REQUESTS` / `RATE_LIMIT_WINDOW_SECONDS`: límite general de peticiones por IP.
-- `VECTORIZE_BURST_MAX_REQUESTS` / `VECTORIZE_BURST_WINDOW_SECONDS`: límite de ráfaga corta específico para los endpoints de vectorizado.
+| Variable | Descripción |
+| --- | --- |
+| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos para llamar a la API. En desarrollo usa `localhost:5173` por defecto; en producción, configúralo con la variable de entorno `TRACEFLOW_CORS_ORIGINS` (lista separada por comas, ej. `TRACEFLOW_CORS_ORIGINS=https://traceflow.app,https://www.traceflow.app`). |
+| `PROCESSING_TIMEOUT_SECONDS` | Tiempo máximo por petición de vectorizado/quitar fondo (cubre el arranque en frío del modelo). |
+| `MAX_UPLOAD_SIZE_BYTES` | Tamaño máximo de archivo aceptado. |
+| `MAX_IMAGE_PIXELS` | Resolución máxima aceptada (ancho × alto), protección contra imágenes con una resolución desproporcionada a su peso en disco. |
+| `RATE_LIMIT_MAX_REQUESTS` / `RATE_LIMIT_WINDOW_SECONDS` | Límite general de peticiones por IP. |
+| `VECTORIZE_BURST_MAX_REQUESTS` / `VECTORIZE_BURST_WINDOW_SECONDS` | Límite de ráfaga corta específico para los endpoints de vectorizado. |
 
 El backend responde con headers de seguridad HTTP básicos (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) en toda respuesta, y loguea (sin exponer al cliente) cualquier excepción no anticipada del pipeline.
+
+---
 
 ## API
 
@@ -137,6 +192,16 @@ Todos los endpoints reciben la imagen como `multipart/form-data` bajo el campo `
 | `POST /api/vectorize/stream` | Igual, pero transmite cada etapa del pipeline por *server-sent events* según se completa (para la barra de progreso en vivo). |
 | `POST /api/remove-background` | Quita el fondo con IA y devuelve un PNG con transparencia real. Acepta `quality=fast\|high`. |
 
+---
+
 ## Licencia
 
 MIT — ver [LICENSE](LICENSE).
+
+---
+
+<div align="center">
+
+Hecho con 🧠 y curvas de Bézier · [Reportar un bug](../../issues) · [Solicitar una función](../../issues)
+
+</div>
